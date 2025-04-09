@@ -1,0 +1,19 @@
+{
+  "name": "virtual_house",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server . -p 8000"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "aframe": "^1.7.1"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

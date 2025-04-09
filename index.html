@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Interactive 3D Model Manipulation</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component/dist/aframe-super-hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-physics-system/dist/aframe-physics-system.min.js"></script>
+</head>
+<body>
+    <a-scene physics="debug: true">
+        <a-assets>
+            <a-asset-item id="wood-floor" src="assets/models/wood_floor/scene.gltf"></a-asset-item>
+            <a-asset-item id="modular-wall" src="assets/models/hq_modular_wall_building_12_piece_pack_gltf/scene.gltf"></a-asset-item>
+            <a-asset-item id="house-roof" src="assets/models/house_roof/scene.gltf"></a-asset-item>
+            <a-asset-item id="sofa-set" src="assets/models/sofa_set_01_gltf/scene.gltf"></a-asset-item>
+            <a-asset-item id="couch-sofa" src="assets/models/couchsofa_set/scene.gltf"></a-asset-item>
+        </a-assets>
+
+        <!-- Models with drag-and-drop capability -->
+        <a-entity gltf-model="#wood-floor" position="0 0 0" dynamic-body super-hands></a-entity>
+        <a-entity gltf-model="#modular-wall" position="5 0 0" dynamic-body super-hands></a-entity>
+        <a-entity gltf-model="#house-roof" position="-5 0 0" dynamic-body super-hands></a-entity>
+        <a-entity gltf-model="#sofa-set" position="0 0 5" dynamic-body super-hands></a-entity>
+        <a-entity gltf-model="#couch-sofa" position="0 0 -5" dynamic-body super-hands></a-entity>
+
+        <!-- Floor -->
+        <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#7BC8A4" static-body></a-plane>
+
+        <!-- Camera -->
+        <a-entity camera look-controls wasd-controls position="0 5 15">
+            <a-entity cursor="rayOrigin: mouse" raycaster="objects: [dynamic-body];"></a-entity>
+            <a-entity super-hands></a-entity>
+        </a-entity>
+
+        <!-- Lighting -->
+        <a-light type="ambient" color="#ccc"></a-light>
+        <a-light type="directional" color="#fff" intensity="0.5" position="1 2 3"></a-light>
+    </a-scene>
+</body>
+</html>

@@ -1,0 +1,11 @@
+Model Information:
+* title:	wood floor
+* source:	https://sketchfab.com/3d-models/wood-floor-a851916d62a942ddbf21488541587bdc
+* author:	saiya.4k (https://sketchfab.com/saiya.4k)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "wood floor" (https://sketchfab.com/3d-models/wood-floor-a851916d62a942ddbf21488541587bdc) by saiya.4k (https://sketchfab.com/saiya.4k) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
