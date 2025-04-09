@@ -2,40 +2,121 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Interactive 3D Model Manipulation</title>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component/dist/aframe-super-hands.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-physics-system/dist/aframe-physics-system.min.js"></script>
+    <title>3D Home Design Tool - VR Compatible</title>
+    <meta name="description" content="Design your home in 3D with drag-and-drop functionality and VR compatibility">
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
+    <script src="https://unpkg.com/aframe-event-set-component@^4.2.1/dist/aframe-event-set-component.min.js"></script>
+    <script src="js/drag-drop-component.js"></script>
+    <script src="js/object-manipulator.js"></script>
+    <script src="js/sidebar-component.js"></script>
+    <script src="js/save-load-system.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
 </head>
 <body>
-    <a-scene physics="debug: true">
+    <div id="ui-container">
+        <div id="sidebar">
+            <h2>Furniture</h2>
+            <div class="furniture-category">
+                <h3>Seating</h3>
+                <div class="item" data-model="sofa-set" draggable="true">
+                    <img src="assets/thumbnails/sofa.jpg" alt="Sofa Set">
+                    <span>Sofa Set</span>
+                </div>
+                <div class="item" data-model="couch-sofa" draggable="true">
+                    <img src="assets/thumbnails/couch.jpg" alt="Couch">
+                    <span>Couch</span>
+                </div>
+            </div>
+            <div class="furniture-category">
+                <h3>Structural</h3>
+                <div class="item" data-model="modular-wall" draggable="true">
+                    <img src="assets/thumbnails/wall.jpg" alt="Wall">
+                    <span>Wall</span>
+                </div>
+                <div class="item" data-model="house-roof" draggable="true">
+                    <img src="assets/thumbnails/roof.jpg" alt="Roof">
+                    <span>Roof</span>
+                </div>
+            </div>
+            <div class="furniture-category">
+                <h3>Flooring</h3>
+                <div class="item" data-model="wood-floor" draggable="true">
+                    <img src="assets/thumbnails/floor.jpg" alt="Wood Floor">
+                    <span>Wood Floor</span>
+                </div>
+            </div>
+        </div>
+        <div id="controls">
+            <button id="enter-vr" class="control-btn">Enter VR</button>
+            <button id="save-design" class="control-btn">Save Design</button>
+            <button id="load-design" class="control-btn">Load Design</button>
+            <div id="manipulation-tools">
+                <button id="translate-mode" class="tool-btn active">Move</button>
+                <button id="rotate-mode" class="tool-btn">Rotate</button>
+                <button id="scale-mode" class="tool-btn">Scale</button>
+            </div>
+        </div>
+    </div>
+
+    <a-scene physics="debug: false" webxr="requiredFeatures: hit-test,local-floor" sidebar="selector: #sidebar" save-load-system>
+        <!-- Assets -->
         <a-assets>
             <a-asset-item id="wood-floor" src="assets/models/wood_floor/scene.gltf"></a-asset-item>
             <a-asset-item id="modular-wall" src="assets/models/hq_modular_wall_building_12_piece_pack_gltf/scene.gltf"></a-asset-item>
             <a-asset-item id="house-roof" src="assets/models/house_roof/scene.gltf"></a-asset-item>
             <a-asset-item id="sofa-set" src="assets/models/sofa_set_01_gltf/scene.gltf"></a-asset-item>
             <a-asset-item id="couch-sofa" src="assets/models/couchsofa_set/scene.gltf"></a-asset-item>
+            
+            <!-- Templates for drag-and-drop objects -->
+            <template id="wood-floor-template">
+                <a-entity gltf-model="#wood-floor" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="flooring"></a-entity>
+            </template>
+            <template id="modular-wall-template">
+                <a-entity gltf-model="#modular-wall" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="wall"></a-entity>
+            </template>
+            <template id="house-roof-template">
+                <a-entity gltf-model="#house-roof" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="roof"></a-entity>
+            </template>
+            <template id="sofa-set-template">
+                <a-entity gltf-model="#sofa-set" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="furniture"></a-entity>
+            </template>
+            <template id="couch-sofa-template">
+                <a-entity gltf-model="#couch-sofa" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="furniture"></a-entity>
+            </template>
         </a-assets>
 
-        <!-- Models with drag-and-drop capability -->
-        <a-entity gltf-model="#wood-floor" position="0 0 0" dynamic-body super-hands></a-entity>
-        <a-entity gltf-model="#modular-wall" position="5 0 0" dynamic-body super-hands></a-entity>
-        <a-entity gltf-model="#house-roof" position="-5 0 0" dynamic-body super-hands></a-entity>
-        <a-entity gltf-model="#sofa-set" position="0 0 5" dynamic-body super-hands></a-entity>
-        <a-entity gltf-model="#couch-sofa" position="0 0 -5" dynamic-body super-hands></a-entity>
-
-        <!-- Floor -->
-        <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#7BC8A4" static-body></a-plane>
+        <!-- Environment -->
+        <a-entity environment="preset: default; ground: flat; groundTexture: none; groundColor: #f0f0f0; lighting: none"></a-entity>
+        
+        <!-- Ground plane for collision detection -->
+        <a-plane id="ground" position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#f0f0f0" 
+                 static-body visible="false" class="collidable"></a-plane>
+        
+        <!-- Lighting -->
+        <a-light type="ambient" color="#BBB"></a-light>
+        <a-light type="directional" color="#FFF" intensity="0.6" position="1 1 1"></a-light>
 
         <!-- Camera -->
-        <a-entity camera look-controls wasd-controls position="0 5 15">
-            <a-entity cursor="rayOrigin: mouse" raycaster="objects: [dynamic-body];"></a-entity>
-            <a-entity super-hands></a-entity>
+        <a-entity id="rig" movement-controls="fly: true; speed: 0.3">
+            <a-entity id="camera" camera position="0 1.6 0" look-controls="pointerLockEnabled: false">
+                <a-entity cursor="rayOrigin: mouse" raycaster="objects: .interactive, .collidable; far: 20"
+                          position="0 0 -0.5" geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02" 
+                          material="color: #4CC3D9; shader: flat" visible="true"></a-entity>
+            </a-entity>
+            
+            <!-- Hand controls for VR -->
+            <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc" visible="false"></a-entity>
+            <a-entity id="rightHand" hand-controls="hand: right; handModelStyle: lowPoly; color: #ffcccc" visible="false"></a-entity>
         </a-entity>
-
-        <!-- Lighting -->
-        <a-light type="ambient" color="#ccc"></a-light>
-        <a-light type="directional" color="#fff" intensity="0.5" position="1 2 3"></a-light>
+        
+        <!-- Grid helper -->
+        <a-entity id="grid" geometry="primitive: plane; width: 50; height: 50" 
+                  material="shader: grid; repeat: 50 50; color: #0F0F0F; opacity: 0.2"
+                  rotation="-90 0 0" position="0 0.01 0"></a-entity>
     </a-scene>
+
+    <script src="js/ui-handler.js"></script>
 </body>
 </html>
