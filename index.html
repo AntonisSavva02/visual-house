@@ -2,121 +2,1835 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>3D Home Design Tool - VR Compatible</title>
-    <meta name="description" content="Design your home in 3D with drag-and-drop functionality and VR compatibility">
+    <title>Easy House Designer - Draw Your Dream Home</title>
+    <meta name="description" content="Draw and design your dream home with an intuitive interface">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
-    <script src="https://unpkg.com/aframe-event-set-component@^4.2.1/dist/aframe-event-set-component.min.js"></script>
-    <script src="js/drag-drop-component.js"></script>
-    <script src="js/object-manipulator.js"></script>
-    <script src="js/sidebar-component.js"></script>
-    <script src="js/save-load-system.js"></script>
-    <link rel="stylesheet" type="text/css" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #60a5fa;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --light: #f3f4f6;
+            --dark: #111827;
+            --gray: #6b7280;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+            background: #f8fafc;
+            color: var(--dark);
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        /* UI Container */
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 20px;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .tool-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 10px;
+            background: var(--light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .tool-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tool-icon {
+            font-size: 24px;
+        }
+
+        .tool-label {
+            font-size: 12px;
+            text-align: center;
+        }
+
+        /* Drawing Guidance */
+        #drawing-guidance {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 20px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 12px 20px;
+            font-weight: 600;
+            color: var(--gray);
+            pointer-events: auto;
+            display: none;
+        }
+
+        /* Measurement Display */
+        #measurement {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 10px 15px;
+            font-weight: 600;
+            pointer-events: auto;
+            display: none;
+        }
+
+        /* Header Bar */
+        #header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--panel-bg);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: auto;
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .app-title-icon {
+            font-size: 24px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            padding: 8px 15px;
+            border-radius: 6px;
+            background: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Properties Panel */
+        #properties {
+            position: absolute;
+            top: 70px;
+            right: 10px;
+            width: 250px;
+            background: var(--panel-bg);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            pointer-events: auto;
+            overflow: hidden;
+            display: none;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .panel-title {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .panel-close {
+            cursor: pointer;
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .panel-close:hover {
+            background: var(--light);
+        }
+
+        .panel-content {
+            padding: 15px;
+        }
+
+        .property-group {
+            margin-bottom: 15px;
+        }
+
+        .property-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .group-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .property-row {
+            margin-bottom: 10px;
+        }
+
+        .property-row label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .property-row input,
+        .property-row select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .property-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .property-btn {
+            padding: 8px 0;
+            text-align: center;
+            border-radius: 4px;
+            background: var(--light);
+        }
+
+        .property-btn.danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Color Options */
+        .color-options {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .color-option.active {
+            border: 2px solid var(--primary);
+            transform: scale(1.1);
+        }
+
+        /* Catalog Panel */
+        #catalog {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            width: 250px;
+            background: var(--panel-bg);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            pointer-events: auto;
+            overflow: hidden;
+        }
+
+        .catalog-tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .catalog-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .catalog-tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .catalog-content {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .catalog-group {
+            margin-bottom: 15px;
+        }
+
+        .catalog-group-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .catalog-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .catalog-item {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .catalog-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+
+        .item-preview {
+            height: 80px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .item-label {
+            padding: 6px 10px;
+            font-size: 12px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* Notification */
+        #notification {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        #notification.show {
+            opacity: 1;
+        }
+
+        #notification.success {
+            background: var(--secondary);
+        }
+
+        #notification.error {
+            background: var(--danger);
+        }
+
+        /* Tooltip style */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s, visibility 0.2s;
+            pointer-events: none;
+            margin-bottom: 5px;
+        }
+
+        .tooltip:hover::after {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Action buttons for selected objects */
+        #object-actions {
+            position: absolute;
+            display: none;
+            gap: 5px;
+            pointer-events: auto;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            #toolbar {
+                bottom: 10px;
+                padding: 8px;
+                gap: 5px;
+            }
+
+            .tool-btn {
+                width: 60px;
+                height: 60px;
+            }
+
+            .header-actions {
+                display: none;
+            }
+        }
+    </style>
 </head>
+
 <body>
     <div id="ui-container">
-        <div id="sidebar">
-            <h2>Furniture</h2>
-            <div class="furniture-category">
-                <h3>Seating</h3>
-                <div class="item" data-model="sofa-set" draggable="true">
-                    <img src="assets/thumbnails/sofa.jpg" alt="Sofa Set">
-                    <span>Sofa Set</span>
-                </div>
-                <div class="item" data-model="couch-sofa" draggable="true">
-                    <img src="assets/thumbnails/couch.jpg" alt="Couch">
-                    <span>Couch</span>
-                </div>
+        <!-- Header Bar -->
+        <div id="header">
+            <div class="app-title">
+                <div class="app-title-icon">🏠</div>
+                <span>Easy House Designer</span>
             </div>
-            <div class="furniture-category">
-                <h3>Structural</h3>
-                <div class="item" data-model="modular-wall" draggable="true">
-                    <img src="assets/thumbnails/wall.jpg" alt="Wall">
-                    <span>Wall</span>
-                </div>
-                <div class="item" data-model="house-roof" draggable="true">
-                    <img src="assets/thumbnails/roof.jpg" alt="Roof">
-                    <span>Roof</span>
-                </div>
+            <div class="header-actions">
+                <button id="save-btn" class="header-btn">
+                    💾 Save
+                </button>
+                <button id="load-btn" class="header-btn">
+                    📂 Load
+                </button>
+                <button id="help-btn" class="header-btn">
+                    ❓ Help
+                </button>
+                <button id="export-btn" class="header-btn primary">
+                    📤 Export
+                </button>
             </div>
-            <div class="furniture-category">
-                <h3>Flooring</h3>
-                <div class="item" data-model="wood-floor" draggable="true">
-                    <img src="assets/thumbnails/floor.jpg" alt="Wood Floor">
-                    <span>Wood Floor</span>
+        </div>
+
+        <!-- Drawing Guidance -->
+        <div id="drawing-guidance">
+            Click and drag to draw walls
+        </div>
+
+        <!-- Measurement Display -->
+        <div id="measurement">
+            Length: 0.0m
+        </div>
+
+        <!-- Toolbar -->
+        <div id="toolbar">
+            <button id="wall-tool" class="tool-btn active" data-tooltip="Draw walls by dragging">
+                <div class="tool-icon">🧱</div>
+                <div class="tool-label">Wall</div>
+            </button>
+            <button id="door-tool" class="tool-btn" data-tooltip="Add doors to walls">
+                <div class="tool-icon">🚪</div>
+                <div class="tool-label">Door</div>
+            </button>
+            <button id="window-tool" class="tool-btn" data-tooltip="Add windows to walls">
+                <div class="tool-icon">🪟</div>
+                <div class="tool-label">Window</div>
+            </button>
+            <button id="room-tool" class="tool-btn" data-tooltip="Create room from walls">
+                <div class="tool-icon">🏠</div>
+                <div class="tool-label">Room</div>
+            </button>
+            <button id="furniture-tool" class="tool-btn" data-tooltip="Add furniture">
+                <div class="tool-icon">🪑</div>
+                <div class="tool-label">Furniture</div>
+            </button>
+            <button id="paint-tool" class="tool-btn" data-tooltip="Change colors and materials">
+                <div class="tool-icon">🎨</div>
+                <div class="tool-label">Paint</div>
+            </button>
+            <button id="select-tool" class="tool-btn" data-tooltip="Select and edit objects">
+                <div class="tool-icon">✋</div>
+                <div class="tool-label">Select</div>
+            </button>
+            <button id="delete-tool" class="tool-btn" data-tooltip="Delete objects">
+                <div class="tool-icon">🗑️</div>
+                <div class="tool-label">Delete</div>
+            </button>
+        </div>
+
+        <!-- Properties Panel -->
+        <div id="properties">
+            <div class="panel-header">
+                <div class="panel-title">Properties</div>
+                <div class="panel-close" id="properties-close">✕</div>
+            </div>
+            <div class="panel-content" id="properties-content">
+                <!-- Content filled dynamically -->
+            </div>
+        </div>
+
+        <!-- Catalog Panel (for furniture and objects) -->
+        <div id="catalog">
+            <div class="catalog-tabs">
+                <div class="catalog-tab active" data-tab="furniture">Furniture</div>
+                <div class="catalog-tab" data-tab="decorations">Decorations</div>
+            </div>
+            <div class="catalog-content" id="catalog-content">
+                <!-- Furniture -->
+                <div class="catalog-group">
+                    <div class="catalog-group-title">Living Room</div>
+                    <div class="catalog-items">
+                        <div class="catalog-item" data-item="sofa">
+                            <div class="item-preview">🛋️</div>
+                            <div class="item-label">Sofa</div>
+                        </div>
+                        <div class="catalog-item" data-item="chair">
+                            <div class="item-preview">🪑</div>
+                            <div class="item-label">Chair</div>
+                        </div>
+                        <div class="catalog-item" data-item="table">
+                            <div class="item-preview">🪓</div>
+                            <div class="item-label">Table</div>
+                        </div>
+                        <div class="catalog-item" data-item="tv">
+                            <div class="item-preview">📺</div>
+                            <div class="item-label">TV</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="catalog-group">
+                    <div class="catalog-group-title">Bedroom</div>
+                    <div class="catalog-items">
+                        <div class="catalog-item" data-item="bed">
+                            <div class="item-preview">🛏️</div>
+                            <div class="item-label">Bed</div>
+                        </div>
+                        <div class="catalog-item" data-item="wardrobe">
+                            <div class="item-preview">🪟</div>
+                            <div class="item-label">Wardrobe</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="catalog-group">
+                    <div class="catalog-group-title">Kitchen</div>
+                    <div class="catalog-items">
+                        <div class="catalog-item" data-item="counter">
+                            <div class="item-preview">🍳</div>
+                            <div class="item-label">Counter</div>
+                        </div>
+                        <div class="catalog-item" data-item="fridge">
+                            <div class="item-preview">❄️</div>
+                            <div class="item-label">Fridge</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div id="controls">
-            <button id="enter-vr" class="control-btn">Enter VR</button>
-            <button id="save-design" class="control-btn">Save Design</button>
-            <button id="load-design" class="control-btn">Load Design</button>
-            <div id="manipulation-tools">
-                <button id="translate-mode" class="tool-btn active">Move</button>
-                <button id="rotate-mode" class="tool-btn">Rotate</button>
-                <button id="scale-mode" class="tool-btn">Scale</button>
-            </div>
+
+        <!-- Object Action Buttons (appears near selected object) -->
+        <div id="object-actions">
+            <button class="action-btn" id="rotate-btn" data-tooltip="Rotate">🔄</button>
+            <button class="action-btn" id="edit-btn" data-tooltip="Edit">✏️</button>
+            <button class="action-btn" id="remove-btn" data-tooltip="Delete">🗑️</button>
         </div>
+
+        <!-- Notification -->
+        <div id="notification">Wall added successfully!</div>
     </div>
 
-    <a-scene physics="debug: false" webxr="requiredFeatures: hit-test,local-floor" sidebar="selector: #sidebar" save-load-system>
+    <a-scene embedded physics="debug: false" cursor="rayOrigin: mouse" raycaster="objects: .interactive, .collidable; far: 100">
         <!-- Assets -->
         <a-assets>
-            <a-asset-item id="wood-floor" src="assets/models/wood_floor/scene.gltf"></a-asset-item>
-            <a-asset-item id="modular-wall" src="assets/models/hq_modular_wall_building_12_piece_pack_gltf/scene.gltf"></a-asset-item>
-            <a-asset-item id="house-roof" src="assets/models/house_roof/scene.gltf"></a-asset-item>
-            <a-asset-item id="sofa-set" src="assets/models/sofa_set_01_gltf/scene.gltf"></a-asset-item>
-            <a-asset-item id="couch-sofa" src="assets/models/couchsofa_set/scene.gltf"></a-asset-item>
+            <!-- Wall template - simplified, only need the dimensions for the draw system -->
+            <script id="wall-template" type="text/html">
+                <a-box class="interactive wall" width="1" height="2.7" depth="0.15" 
+                       material="color: #F5F5F5" position="0 1.35 0"></a-box>
+            </script>
             
-            <!-- Templates for drag-and-drop objects -->
-            <template id="wood-floor-template">
-                <a-entity gltf-model="#wood-floor" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="flooring"></a-entity>
-            </template>
-            <template id="modular-wall-template">
-                <a-entity gltf-model="#modular-wall" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="wall"></a-entity>
-            </template>
-            <template id="house-roof-template">
-                <a-entity gltf-model="#house-roof" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="roof"></a-entity>
-            </template>
-            <template id="sofa-set-template">
-                <a-entity gltf-model="#sofa-set" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="furniture"></a-entity>
-            </template>
-            <template id="couch-sofa-template">
-                <a-entity gltf-model="#couch-sofa" drag-droppable manipulable class="interactive" scale="0.5 0.5 0.5" data-type="furniture"></a-entity>
-            </template>
+            <!-- Door template -->
+            <script id="door-template" type="text/html">
+                <a-entity class="interactive door">
+                    <a-box class="door-frame" width="1" height="2.2" depth="0.2" material="color: #A0522D" position="0 1.1 0"></a-box>
+                    <a-box class="door-panel" width="0.9" height="2.1" depth="0.05" material="color: #CD853F" position="0 1.05 0.06"></a-box>
+                    <a-sphere class="door-knob" radius="0.03" material="color: #FFD700" position="0.35 1.05 0.1"></a-sphere>
+                </a-entity>
+            </script>
+            
+            <!-- Window template -->
+            <script id="window-template" type="text/html">
+                <a-entity class="interactive window">
+                    <a-box class="window-frame" width="1.2" height="1.2" depth="0.2" material="color: #A0522D" position="0 1.5 0"></a-box>
+                    <a-box class="window-glass" width="1" height="1" depth="0.05" material="color: #87CEEB; opacity: 0.7" position="0 1.5 0"></a-box>
+                </a-entity>
+            </script>
+            
+            <!-- Furniture templates -->
+            <script id="sofa-template" type="text/html">
+                <a-entity class="interactive furniture sofa">
+                    <a-box width="2" height="0.5" depth="0.8" material="color: #6082B6" position="0 0.25 0"></a-box>
+                    <a-box width="2" height="0.7" depth="0.2" material="color: #6082B6" position="0 0.85 -0.3"></a-box>
+                    <a-box width="0.2" height="0.7" depth="0.8" material="color: #6082B6" position="0.9 0.6 0"></a-box>
+                    <a-box width="0.2" height="0.7" depth="0.8" material="color: #6082B6" position="-0.9 0.6 0"></a-box>
+                </a-entity>
+            </script>
+            
+            <script id="chair-template" type="text/html">
+                <a-entity class="interactive furniture chair">
+                    <a-box width="0.5" height="0.05" depth="0.5" material="color: #8B4513" position="0 0.4 0"></a-box>
+                    <a-box width="0.5" height="0.5" depth="0.05" material="color: #8B4513" position="0 0.65 -0.25"></a-box>
+                    <a-box width="0.05" height="0.4" depth="0.05" material="color: #8B4513" position="0.2 0.2 0.2"></a-box>
+                    <a-box width="0.05" height="0.4" depth="0.05" material="color: #8B4513" position="0.2 0.2 -0.2"></a-box>
+                    <a-box width="0.05" height="0.4" depth="0.05" material="color: #8B4513" position="-0.2 0.2 0.2"></a-box>
+                    <a-box width="0.05" height="0.4" depth="0.05" material="color: #8B4513" position="-0.2 0.2 -0.2"></a-box>
+                </a-entity>
+            </script>
+            
+            <script id="table-template" type="text/html">
+                <a-entity class="interactive furniture table">
+                    <a-box width="1.2" height="0.05" depth="0.8" material="color: #8B4513" position="0 0.7 0"></a-box>
+                    <a-box width="0.05" height="0.7" depth="0.05" material="color: #8B4513" position="0.55 0.35 0.35"></a-box>
+                    <a-box width="0.05" height="0.7" depth="0.05" material="color: #8B4513" position="0.55 0.35 -0.35"></a-box>
+                    <a-box width="0.05" height="0.7" depth="0.05" material="color: #8B4513" position="-0.55 0.35 0.35"></a-box>
+                    <a-box width="0.05" height="0.7" depth="0.05" material="color: #8B4513" position="-0.55 0.35 -0.35"></a-box>
+                </a-entity>
+            </script>
+            
+            <script id="bed-template" type="text/html">
+                <a-entity class="interactive furniture bed">
+                    <a-box width="1.6" height="0.3" depth="2" material="color: #8B4513" position="0 0.15 0"></a-box>
+                    <a-box width="1.6" height="0.1" depth="2" material="color: #F5F5DC" position="0 0.35 0"></a-box>
+                    <a-box width="1.6" height="0.6" depth="0.1" material="color: #8B4513" position="0 0.65 -0.95"></a-box>
+                </a-entity>
+            </script>
         </a-assets>
 
-        <!-- Environment -->
-        <a-entity environment="preset: default; ground: flat; groundTexture: none; groundColor: #f0f0f0; lighting: none"></a-entity>
+        <!-- Environment (simple flat ground with nice lighting) -->
+        <a-entity environment="preset: forest; ground: flat; groundTexture: none; groundColor: #8BC34A; lighting: none; shadow: false; dressing: none;"></a-entity>
         
         <!-- Ground plane for collision detection -->
-        <a-plane id="ground" position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#f0f0f0" 
-                 static-body visible="false" class="collidable"></a-plane>
-        
-        <!-- Lighting -->
-        <a-light type="ambient" color="#BBB"></a-light>
-        <a-light type="directional" color="#FFF" intensity="0.6" position="1 1 1"></a-light>
-
-        <!-- Camera -->
-        <a-entity id="rig" movement-controls="fly: true; speed: 0.3">
-            <a-entity id="camera" camera position="0 1.6 0" look-controls="pointerLockEnabled: false">
-                <a-entity cursor="rayOrigin: mouse" raycaster="objects: .interactive, .collidable; far: 20"
-                          position="0 0 -0.5" geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02" 
-                          material="color: #4CC3D9; shader: flat" visible="true"></a-entity>
-            </a-entity>
-            
-            <!-- Hand controls for VR -->
-            <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc" visible="false"></a-entity>
-            <a-entity id="rightHand" hand-controls="hand: right; handModelStyle: lowPoly; color: #ffcccc" visible="false"></a-entity>
+        <a-entity id="ground">
+            <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#8BC34A" 
+                     static-body visible="true" class="collidable"></a-plane>
+            <!-- Grid for reference -->
+            <a-entity id="grid" position="0 0.01 0"></a-entity>
         </a-entity>
         
-        <!-- Grid helper -->
-        <a-entity id="grid" geometry="primitive: plane; width: 50; height: 50" 
-                  material="shader: grid; repeat: 50 50; color: #0F0F0F; opacity: 0.2"
-                  rotation="-90 0 0" position="0 0.01 0"></a-entity>
+        <!-- Lighting -->
+        <a-light type="ambient" color="#BBB" intensity="0.5"></a-light>
+        <a-light type="directional" color="#FFF" intensity="0.6" position="1 1 1"></a-light>
+        <a-light type="directional" color="#FFF" intensity="0.4" position="-1 1 -1"></a-light>
+
+        <!-- Camera -->
+        <a-entity id="rig" position="0 15 0" rotation="-90 0 0">
+            <a-camera id="camera" look-controls="enabled: false" wasd-controls="enabled: false">
+                <a-entity cursor="rayOrigin: mouse" raycaster="objects: .interactive, .collidable; far: 100"
+                          position="0 0 -0.5" 
+                          geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02" 
+                          material="color: #4CC3D9; shader: flat" visible="true"></a-entity>
+            </a-camera>
+        </a-entity>
+        
+        <!-- Temporary drawing visual indicators -->
+        <a-entity id="drawing-indicator" visible="false"></a-entity>
+        <a-entity id="house-container"></a-entity>
     </a-scene>
 
-    <script src="js/ui-handler.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Global state variables
+            let currentTool = 'wall';
+            let isDrawing = false;
+            let drawStartPosition = null;
+            let drawCurrentPosition = null;
+            let selectedObject = null;
+            let wallHeight = 2.7; // Fixed wall height (2.7 meters)
+            let wallThickness = 0.15; // Fixed wall thickness (15cm)
+            let drawingIndicator = null;
+            let snapToGrid = true;
+            let gridSize = 0.5; // Half-meter grid
+            let wallSegments = []; // Keep track of wall segments
+            let houseContainer = document.getElementById('house-container');
+            
+            // Create grid for reference
+            createGrid();
+            
+            // Setup event handlers
+            setupToolbar();
+            setupSceneEvents();
+            setupUIHandlers();
+            
+            // Show initial guidance
+            showGuidance('Click and drag to draw walls');
+            
+            // Create grid
+            function createGrid() {
+                const gridEntity = document.getElementById('grid');
+                const gridSize = 30; // Total grid size in meters
+                const gridInterval = 1; // 1-meter grid
+                const gridLineCount = gridSize / gridInterval;
+                const gridColor = '#555555';
+                
+                // Create lines along x-axis
+                for (let i = 0; i <= gridLineCount; i++) {
+                    const linePos = (i * gridInterval) - (gridSize / 2);
+                    const line = document.createElement('a-entity');
+                    line.setAttribute('geometry', {
+                        primitive: 'plane',
+                        width: 0.02,
+                        height: gridSize
+                    });
+                    line.setAttribute('material', {
+                        color: gridColor,
+                        opacity: 0.2,
+                        transparent: true
+                    });
+                    line.setAttribute('position', {
+                        x: linePos,
+                        y: 0,
+                        z: 0
+                    });
+                    line.classList.add('grid-line');
+                    gridEntity.appendChild(line);
+                }
+                
+                // Create lines along z-axis
+                for (let i = 0; i <= gridLineCount; i++) {
+                    const linePos = (i * gridInterval) - (gridSize / 2);
+                    const line = document.createElement('a-entity');
+                    line.setAttribute('geometry', {
+                        primitive: 'plane',
+                        width: gridSize,
+                        height: 0.02
+                    });
+                    line.setAttribute('material', {
+                        color: gridColor,
+                        opacity: 0.2,
+                        transparent: true
+                    });
+                    line.setAttribute('position', {
+                        x: 0,
+                        y: 0,
+                        z: linePos
+                    });
+                    line.classList.add('grid-line');
+                    gridEntity.appendChild(line);
+                }
+            }
+            
+            function setupToolbar() {
+                // Tool selection
+                const toolButtons = document.querySelectorAll('.tool-btn');
+                toolButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // Update active tool
+                        const tool = this.id.split('-')[0];
+                        currentTool = tool;
+                        
+                        // Update button states
+                        toolButtons.forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        // Show appropriate guidance based on tool
+                        switch(tool) {
+                            case 'wall':
+                                showGuidance('Click and drag to draw walls');
+                                break;
+                            case 'door':
+                                showGuidance('Click on a wall to add a door');
+                                break;
+                            case 'window':
+                                showGuidance('Click on a wall to add a window');
+                                break;
+                            case 'room':
+                                showGuidance('Click to auto-detect room from walls');
+                                break;
+                            case 'furniture':
+                                showGuidance('Select furniture from the catalog');
+                                break;
+                            case 'paint':
+                                showGuidance('Click on objects to change their color');
+                                break;
+                            case 'select':
+                                showGuidance('Click objects to select and edit them');
+                                break;
+                            case 'delete':
+                                showGuidance('Click objects to delete them');
+                                break;
+                        }
+                        
+                        // Deselect any currently selected object
+                        if (selectedObject) {
+                            unhighlightObject(selectedObject);
+                            selectedObject = null;
+                            hideObjectActions();
+                        }
+                    });
+                });
+            }
+            
+            function setupSceneEvents() {
+                const scene = document.querySelector('a-scene');
+                
+                // Mouse down event for starting wall drawing
+                scene.addEventListener('mousedown', function(evt) {
+                    if (currentTool !== 'wall' || isDrawing) return;
+                    
+                    // Make sure we're clicking on the ground
+                    if (evt.detail.intersection && evt.detail.intersection.object.el.id === 'ground') {
+                        isDrawing = true;
+                        
+                        // Get start position and snap to grid if enabled
+                        const point = evt.detail.intersection.point;
+                        drawStartPosition = snapToGrid ? snapPointToGrid(point) : point;
+                        
+                        // Create drawing indicator
+                        createDrawingIndicator(drawStartPosition);
+                        
+                        // Show measurement display
+                        document.getElementById('measurement').style.display = 'block';
+                    }
+                });
+                
+                // Mouse move event for updating wall preview while drawing
+                scene.addEventListener('mousemove', function(evt) {
+                    if (!isDrawing) return;
+                    
+                    if (evt.detail.intersection) {
+                        // Get current position and snap to grid if enabled
+                        const point = evt.detail.intersection.point;
+                        drawCurrentPosition = snapToGrid ? snapPointToGrid(point) : point;
+                        
+                        // Update drawing indicator
+                        updateDrawingIndicator(drawStartPosition, drawCurrentPosition);
+                        
+                        // Update measurement display
+                        updateMeasurement(drawStartPosition, drawCurrentPosition);
+                    }
+                });
+                
+                // Mouse up event for finalizing wall creation
+                scene.addEventListener('mouseup', function() {
+                    if (!isDrawing) return;
+                    
+                    // Only create wall if we have both positions and they're different
+                    if (drawStartPosition && drawCurrentPosition &&
+                        (drawStartPosition.x !== drawCurrentPosition.x || 
+                         drawStartPosition.z !== drawCurrentPosition.z)) {
+                        
+                        // Create the actual wall
+                        createWall(drawStartPosition, drawCurrentPosition);
+                    }
+                    
+                    // Reset drawing state
+                    isDrawing = false;
+                    drawStartPosition = null;
+                    drawCurrentPosition = null;
+                    
+                    // Remove drawing indicator
+                    removeDrawingIndicator();
+                    
+                    // Hide measurement display
+                    document.getElementById('measurement').style.display = 'none';
+                });
+                
+                // Handle clicks on interactive objects
+                scene.addEventListener('click', function(evt) {
+                    // Skip if we're in drawing mode
+                    if (isDrawing) return;
+                    
+                    // Check if we clicked on an interactive object
+                    if (evt.detail.intersection && evt.detail.intersection.object.el.classList.contains('interactive')) {
+                        const clickedObject = evt.detail.intersection.object.el;
+                        
+                        // Handle based on current tool
+                        handleObjectClick(clickedObject, evt.detail.intersection);
+                    }
+                });
+            }
+            
+            function setupUIHandlers() {
+                // Properties panel close button
+                document.getElementById('properties-close').addEventListener('click', function() {
+                    document.getElementById('properties').style.display = 'none';
+                });
+                
+                // Catalog tab switching
+                const catalogTabs = document.querySelectorAll('.catalog-tab');
+                catalogTabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        // Update active tab
+                        catalogTabs.forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        // Here you would filter catalog items based on tab
+                        // For this demo, we'll just show a notification
+                        showNotification(`Switched to ${this.textContent} tab`);
+                    });
+                });
+                
+                // Catalog item selection
+                const catalogItems = document.querySelectorAll('.catalog-item');
+                catalogItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        const furnitureType = this.getAttribute('data-item');
+                        
+                        // Switch to furniture placement mode
+                        currentTool = 'furniture';
+                        document.querySelectorAll('.tool-btn').forEach(btn => {
+                            btn.classList.remove('active');
+                            if (btn.id === 'furniture-tool') {
+                                btn.classList.add('active');
+                            }
+                        });
+                        
+                        // Set the selected furniture type
+                        window.selectedFurnitureType = furnitureType;
+                        
+                        showGuidance(`Click to place ${furnitureType}`);
+                        showNotification(`Selected ${furnitureType}. Click to place.`, 'success');
+                    });
+                });
+                
+                // Object action buttons
+                document.getElementById('rotate-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (selectedObject) {
+                        rotateObject(selectedObject);
+                    }
+                });
+                
+                document.getElementById('edit-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (selectedObject) {
+                        showPropertiesPanel(selectedObject);
+                    }
+                });
+                
+                document.getElementById('remove-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (selectedObject) {
+                        deleteObject(selectedObject);
+                    }
+                });
+                
+                // Save and load buttons
+                document.getElementById('save-btn').addEventListener('click', function() {
+                    saveDesign();
+                });
+                
+                document.getElementById('load-btn').addEventListener('click', function() {
+                    loadDesign();
+                });
+                
+                // Help button
+                document.getElementById('help-btn').addEventListener('click', function() {
+                    showHelpDialog();
+                });
+                
+                // Export button
+                document.getElementById('export-btn').addEventListener('click', function() {
+                    showExportDialog();
+                });
+            }
+            
+            function snapPointToGrid(point) {
+                return {
+                    x: Math.round(point.x / gridSize) * gridSize,
+                    y: point.y,
+                    z: Math.round(point.z / gridSize) * gridSize
+                };
+            }
+            
+            function createDrawingIndicator(startPos) {
+                // Create entity to hold the indicator
+                drawingIndicator = document.createElement('a-entity');
+                drawingIndicator.id = 'temp-wall';
+                
+                // Set properties
+                drawingIndicator.setAttribute('position', {
+                    x: startPos.x,
+                    y: 0,
+                    z: startPos.z
+                });
+                
+                // Create line marker for start point
+                const startMarker = document.createElement('a-cylinder');
+                startMarker.setAttribute('radius', 0.1);
+                startMarker.setAttribute('height', 0.05);
+                startMarker.setAttribute('material', 'color: #4CC3D9');
+                startMarker.setAttribute('position', {x: 0, y: 0.025, z: 0});
+                
+                drawingIndicator.appendChild(startMarker);
+                document.getElementById('drawing-indicator').appendChild(drawingIndicator);
+                document.getElementById('drawing-indicator').setAttribute('visible', true);
+            }
+            
+            function updateDrawingIndicator(startPos, endPos) {
+                if (!drawingIndicator) return;
+                
+                // Calculate wall dimensions based on start and end points
+                const dx = endPos.x - startPos.x;
+                const dz = endPos.z - startPos.z;
+                
+                // Check if the wall is primarily horizontal or vertical
+                const isHorizontal = Math.abs(dx) > Math.abs(dz);
+                
+                let wallWidth, wallRotation;
+                
+                if (isHorizontal) {
+                    // Horizontal wall
+                    wallWidth = Math.abs(dx);
+                    wallRotation = dx < 0 ? 180 : 0;
+                } else {
+                    // Vertical wall
+                    wallWidth = Math.abs(dz);
+                    wallRotation = dz < 0 ? 270 : 90;
+                }
+                
+                // Remove previous indicator wall if it exists
+                const existingWall = drawingIndicator.querySelector('.indicator-wall');
+                if (existingWall) {
+                    drawingIndicator.removeChild(existingWall);
+                }
+                
+                // Create indicator wall
+                const wall = document.createElement('a-box');
+                wall.classList.add('indicator-wall');
+                wall.setAttribute('width', wallWidth);
+                wall.setAttribute('height', wallHeight);
+                wall.setAttribute('depth', wallThickness);
+                wall.setAttribute('material', 'color: #4CC3D9; opacity: 0.5; transparent: true');
+                
+                // Position wall based on its rotation
+                let posX = 0, posZ = 0;
+                
+                if (isHorizontal) {
+                    // Horizontal wall
+                    posX = dx / 2;
+                } else {
+                    // Vertical wall
+                    posZ = dz / 2;
+                }
+                
+                wall.setAttribute('position', {
+                    x: posX,
+                    y: wallHeight / 2,
+                    z: posZ
+                });
+                
+                wall.setAttribute('rotation', {
+                    x: 0,
+                    y: wallRotation,
+                    z: 0
+                });
+                
+                drawingIndicator.appendChild(wall);
+                
+                // Update end point marker
+                let endMarker = drawingIndicator.querySelector('.end-marker');
+                
+                if (!endMarker) {
+                    endMarker = document.createElement('a-cylinder');
+                    endMarker.classList.add('end-marker');
+                    endMarker.setAttribute('radius', 0.1);
+                    endMarker.setAttribute('height', 0.05);
+                    endMarker.setAttribute('material', 'color: #4CC3D9');
+                    drawingIndicator.appendChild(endMarker);
+                }
+                
+                endMarker.setAttribute('position', {
+                    x: dx,
+                    y: 0.025,
+                    z: dz
+                });
+            }
+            
+            function removeDrawingIndicator() {
+                document.getElementById('drawing-indicator').innerHTML = '';
+                document.getElementById('drawing-indicator').setAttribute('visible', false);
+                drawingIndicator = null;
+            }
+            
+            function updateMeasurement(startPos, endPos) {
+                const dx = endPos.x - startPos.x;
+                const dz = endPos.z - startPos.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                document.getElementById('measurement').textContent = `Length: ${distance.toFixed(1)}m`;
+            }
+            
+            function createWall(startPos, endPos) {
+                // Calculate wall dimensions based on start and end points
+                const dx = endPos.x - startPos.x;
+                const dz = endPos.z - startPos.z;
+                
+                // Check if the wall is primarily horizontal or vertical
+                const isHorizontal = Math.abs(dx) > Math.abs(dz);
+                
+                let wallWidth, wallRotation;
+                
+                if (isHorizontal) {
+                    // Horizontal wall
+                    wallWidth = Math.abs(dx);
+                    wallRotation = dx < 0 ? 180 : 0;
+                } else {
+                    // Vertical wall
+                    wallWidth = Math.abs(dz);
+                    wallRotation = dz < 0 ? 270 : 90;
+                }
+                
+                // Create wall entity
+                const wall = document.createElement('a-entity');
+                wall.classList.add('interactive', 'wall');
+                wall.setAttribute('data-start', `${startPos.x} ${startPos.y} ${startPos.z}`);
+                wall.setAttribute('data-end', `${endPos.x} ${endPos.y} ${endPos.z}`);
+                
+                // Position wall at start position
+                wall.setAttribute('position', {
+                    x: startPos.x,
+                    y: 0,
+                    z: startPos.z
+                });
+                
+                // Create the wall box
+                const wallBox = document.createElement('a-box');
+                wallBox.setAttribute('width', wallWidth);
+                wallBox.setAttribute('height', wallHeight);
+                wallBox.setAttribute('depth', wallThickness);
+                wallBox.setAttribute('material', 'color: #F5F5F5');
+                
+                // Position wall box based on its rotation
+                let posX = 0, posZ = 0;
+                
+                if (isHorizontal) {
+                    // Horizontal wall
+                    posX = dx / 2;
+                } else {
+                    // Vertical wall
+                    posZ = dz / 2;
+                }
+                
+                wallBox.setAttribute('position', {
+                    x: posX,
+                    y: wallHeight / 2,
+                    z: posZ
+                });
+                
+                wallBox.setAttribute('rotation', {
+                    x: 0,
+                    y: wallRotation,
+                    z: 0
+                });
+                
+                wall.appendChild(wallBox);
+                
+                // Add to house container
+                houseContainer.appendChild(wall);
+                
+                // Add to wall segments array
+                wallSegments.push({
+                    element: wall,
+                    start: startPos,
+                    end: endPos,
+                    width: wallWidth,
+                    rotation: wallRotation,
+                    isHorizontal: isHorizontal
+                });
+                
+                showNotification('Wall created successfully!', 'success');
+                
+                // Try to detect any wall intersections and create corners
+                detectWallIntersections(wall, startPos, endPos);
+            }
+            
+            function detectWallIntersections(newWall, startPos, endPos) {
+                // This is a simplified version - would need more complex logic for real-world use
+                // Just check if the new wall's endpoints are close to existing walls
+                wallSegments.forEach(segment => {
+                    // Skip comparing with itself
+                    if (segment.element === newWall) return;
+                    
+                    // Check if endpoints are close to this segment
+                    // This is where you would implement corner creation
+                });
+            }
+            
+            function handleObjectClick(object, intersection) {
+                switch (currentTool) {
+                    case 'select':
+                        selectObject(object);
+                        break;
+                    case 'delete':
+                        deleteObject(object);
+                        break;
+                    case 'door':
+                        if (object.classList.contains('wall')) {
+                            addDoorToWall(object, intersection);
+                        } else {
+                            showNotification('Doors can only be added to walls', 'error');
+                        }
+                        break;
+                    case 'window':
+                        if (object.classList.contains('wall')) {
+                            addWindowToWall(object, intersection);
+                        } else {
+                            showNotification('Windows can only be added to walls', 'error');
+                        }
+                        break;
+                    case 'paint':
+                        openPaintOptions(object);
+                        break;
+                    case 'furniture':
+                        // This is handled differently - furniture is placed on ground click
+                        break;
+                }
+            }
+            
+            function addDoorToWall(wall, intersection) {
+                // Get wall's dimensions and orientation
+                const wallBox = wall.querySelector('a-box');
+                const wallWidth = parseFloat(wallBox.getAttribute('width'));
+                const wallRotation = wallBox.getAttribute('rotation').y;
+                
+                // Create door entity
+                const door = document.createElement('a-entity');
+                door.innerHTML = document.getElementById('door-template').innerHTML;
+                door.classList.add('interactive', 'door');
+                
+                // Position door at the intersection point
+                const wallPosition = wall.getAttribute('position');
+                const hitPoint = intersection.point;
+                
+                // Calculate door position relative to wall
+                let doorX = hitPoint.x - wallPosition.x;
+                let doorZ = hitPoint.z - wallPosition.z;
+                
+                // Adjust door orientation based on wall rotation
+                door.setAttribute('rotation', {
+                    x: 0,
+                    y: wallRotation,
+                    z: 0
+                });
+                
+                // Position door along the wall based on hit point
+                // This is a simplified placement - would need more complex logic for precise positioning
+                if (wallRotation === 0 || wallRotation === 180) {
+                    // Horizontal wall
+                    doorX = Math.min(Math.max(doorX, 0.5), wallWidth - 0.5);
+                    doorZ = 0;
+                } else {
+                    // Vertical wall
+                    doorX = 0;
+                    doorZ = Math.min(Math.max(doorZ, 0.5), wallWidth - 0.5);
+                }
+                
+                door.setAttribute('position', {
+                    x: doorX,
+                    y: 0,
+                    z: doorZ
+                });
+                
+                // Add door to wall
+                wall.appendChild(door);
+                
+                showNotification('Door added', 'success');
+            }
+            
+            function addWindowToWall(wall, intersection) {
+                // Get wall's dimensions and orientation
+                const wallBox = wall.querySelector('a-box');
+                const wallWidth = parseFloat(wallBox.getAttribute('width'));
+                const wallRotation = wallBox.getAttribute('rotation').y;
+                
+                // Create window entity
+                const window = document.createElement('a-entity');
+                window.innerHTML = document.getElementById('window-template').innerHTML;
+                window.classList.add('interactive', 'window');
+                
+                // Position window at the intersection point
+                const wallPosition = wall.getAttribute('position');
+                const hitPoint = intersection.point;
+                
+                // Calculate window position relative to wall
+                let windowX = hitPoint.x - wallPosition.x;
+                let windowZ = hitPoint.z - wallPosition.z;
+                
+                // Adjust window orientation based on wall rotation
+                window.setAttribute('rotation', {
+                    x: 0,
+                    y: wallRotation,
+                    z: 0
+                });
+                
+                // Position window along the wall based on hit point
+                if (wallRotation === 0 || wallRotation === 180) {
+                    // Horizontal wall
+                    windowX = Math.min(Math.max(windowX, 0.6), wallWidth - 0.6);
+                    windowZ = 0;
+                } else {
+                    // Vertical wall
+                    windowX = 0;
+                    windowZ = Math.min(Math.max(windowZ, 0.6), wallWidth - 0.6);
+                }
+                
+                window.setAttribute('position', {
+                    x: windowX,
+                    y: 0,
+                    z: windowZ
+                });
+                
+                // Add window to wall
+                wall.appendChild(window);
+                
+                showNotification('Window added', 'success');
+            }
+            
+            function placeFurniture(position) {
+                // Check if we have a selected furniture type
+                if (!window.selectedFurnitureType) {
+                    showNotification('Please select furniture from the catalog first', 'error');
+                    return;
+                }
+                
+                // Create furniture entity based on selected type
+                const furniture = document.createElement('a-entity');
+                
+                // Use template if available, otherwise create a placeholder
+                const templateId = `${window.selectedFurnitureType}-template`;
+                const template = document.getElementById(templateId);
+                
+                if (template) {
+                    furniture.innerHTML = template.innerHTML;
+                } else {
+                    // Create placeholder for furniture types without templates
+                    const box = document.createElement('a-box');
+                    box.setAttribute('width', 1);
+                    box.setAttribute('height', 0.5);
+                    box.setAttribute('depth', 1);
+                    box.setAttribute('material', 'color: #8B4513');
+                    box.setAttribute('position', {x: 0, y: 0.25, z: 0});
+                    furniture.appendChild(box);
+                }
+                
+                furniture.classList.add('interactive', 'furniture', window.selectedFurnitureType);
+                
+                // Position furniture at clicked position
+                position.y = 0; // Place on ground
+                furniture.setAttribute('position', position);
+                
+                // Add to house container
+                houseContainer.appendChild(furniture);
+                
+                showNotification(`${window.selectedFurnitureType} placed`, 'success');
+                
+                // Select the newly placed furniture
+                selectObject(furniture);
+            }
+            
+            function selectObject(object) {
+                // Deselect previous object
+                if (selectedObject && selectedObject !== object) {
+                    unhighlightObject(selectedObject);
+                }
+                
+                // Select new object
+                selectedObject = object;
+                highlightObject(object);
+                
+                // Show object actions near the selected object
+                showObjectActions(object);
+                
+                // Show appropriate message
+                const objectType = getObjectType(object);
+                showNotification(`Selected ${objectType}`);
+            }
+            
+            function getObjectType(object) {
+                if (object.classList.contains('wall')) return 'Wall';
+                if (object.classList.contains('door')) return 'Door';
+                if (object.classList.contains('window')) return 'Window';
+                if (object.classList.contains('furniture')) {
+                    // Get specific furniture type if available
+                    for (const className of object.classList) {
+                        if (className !== 'interactive' && className !== 'furniture') {
+                            return className.charAt(0).toUpperCase() + className.slice(1);
+                        }
+                    }
+                    return 'Furniture';
+                }
+                return 'Object';
+            }
+            
+            function highlightObject(object) {
+                // Add highlight effect (pulsing animation)
+                object.setAttribute('animation', {
+                    property: 'scale',
+                    from: '0.98 0.98 0.98',
+                    to: '1.02 1.02 1.02',
+                    dir: 'alternate',
+                    dur: 800,
+                    loop: true,
+                    easing: 'easeInOutSine'
+                });
+                
+                // Add outline effect (would be better with a shader, but this is simpler)
+                object.setAttribute('data-original-color', object.getAttribute('material')?.color || '#FFFFFF');
+                
+                // Apply highlight material
+                const material = object.getAttribute('material') || {};
+                if (material) {
+                    object.setAttribute('material', 'emissive', '#222222');
+                }
+            }
+            
+            function unhighlightObject(object) {
+                // Remove animation
+                object.removeAttribute('animation');
+                
+                // Reset original scale
+                object.setAttribute('scale', '1 1 1');
+                
+                // Remove emissive glow
+                if (object.getAttribute('material')) {
+                    object.setAttribute('material', 'emissive', '#000000');
+                }
+            }
+            
+            function showObjectActions(object) {
+                const actionsPanel = document.getElementById('object-actions');
+                
+                // Position the actions panel above the object in screen space
+                // This is a simplification - in a real app, you'd use more sophisticated positioning
+                const objectPosition = object.getAttribute('position');
+                const camera = document.getElementById('camera');
+                
+                // Convert 3D position to screen position
+                // This is approximate - actual implementation would use proper projection math
+                const worldToScreen = (pos) => {
+                    const canvas = document.querySelector('canvas');
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    
+                    // Simple conversion - not accurate for all camera angles
+                    const screenX = width / 2 + (pos.x * 20);
+                    const screenY = height / 2 - (pos.z * 20);
+                    
+                    return { x: screenX, y: screenY };
+                };
+                
+                const screenPos = worldToScreen(objectPosition);
+                
+                actionsPanel.style.left = `${screenPos.x}px`;
+                actionsPanel.style.top = `${screenPos.y - 50}px`; // Position above the object
+                actionsPanel.style.display = 'flex';
+            }
+            
+            function hideObjectActions() {
+                document.getElementById('object-actions').style.display = 'none';
+            }
+            
+            function deleteObject(object) {
+                // If the object is a child of another object (like a door in a wall)
+                if (object.parentNode && object.parentNode.classList.contains('interactive')) {
+                    object.parentNode.removeChild(object);
+                } else if (object.parentNode) {
+                    // Otherwise remove from the scene
+                    object.parentNode.removeChild(object);
+                    
+                    // If it's a wall, remove from wall segments array
+                    if (object.classList.contains('wall')) {
+                        const index = wallSegments.findIndex(segment => segment.element === object);
+                        if (index !== -1) {
+                            wallSegments.splice(index, 1);
+                        }
+                    }
+                }
+                
+                // Reset selection
+                if (selectedObject === object) {
+                    selectedObject = null;
+                    hideObjectActions();
+                    document.getElementById('properties').style.display = 'none';
+                }
+                
+                showNotification(`${getObjectType(object)} deleted`, 'success');
+            }
+            
+            function rotateObject(object) {
+                // Get current rotation
+                const currentRotation = object.getAttribute('rotation') || { x: 0, y: 0, z: 0 };
+                
+                // Rotate by 90 degrees
+                const newRotation = {
+                    x: currentRotation.x,
+                    y: (currentRotation.y + 90) % 360,
+                    z: currentRotation.z
+                };
+                
+                // Apply new rotation
+                object.setAttribute('rotation', newRotation);
+                
+                showNotification('Object rotated', 'success');
+            }
+            
+            function openPaintOptions(object) {
+                // Show properties panel with color options
+                showPropertiesPanel(object);
+                
+                // Scroll to appearance section
+                // (In a real app, you would probably create a specialized paint panel)
+                
+                showNotification('Select a color to paint this object');
+            }
+            
+            function showPropertiesPanel(object) {
+                const panel = document.getElementById('properties');
+                const content = document.getElementById('properties-content');
+                
+                // Clear previous content
+                content.innerHTML = '';
+                
+                // Get object type
+                const objectType = getObjectType(object);
+                
+                // Create dimensions section if applicable
+                if (object.classList.contains('wall') || object.classList.contains('furniture')) {
+                    const dimensionsGroup = document.createElement('div');
+                    dimensionsGroup.classList.add('property-group');
+                    
+                    // Group title
+                    const groupTitle = document.createElement('div');
+                    groupTitle.classList.add('group-title');
+                    groupTitle.textContent = 'Dimensions';
+                    dimensionsGroup.appendChild(groupTitle);
+                    
+                    // For walls, show length
+                    if (object.classList.contains('wall')) {
+                        const wallBox = object.querySelector('a-box');
+                        const wallWidth = parseFloat(wallBox.getAttribute('width'));
+                        
+                        const lengthRow = document.createElement('div');
+                        lengthRow.classList.add('property-row');
+                        
+                        const lengthLabel = document.createElement('label');
+                        lengthLabel.textContent = 'Length';
+                        lengthRow.appendChild(lengthLabel);
+                        
+                        const lengthInput = document.createElement('input');
+                        lengthInput.type = 'number';
+                        lengthInput.min = 0.5;
+                        lengthInput.step = 0.1;
+                        lengthInput.value = wallWidth.toFixed(1);
+                        
+                        // Add event listener to update wall length
+                        lengthInput.addEventListener('change', function() {
+                            const newLength = parseFloat(this.value);
+                            if (newLength && newLength >= 0.5) {
+                                wallBox.setAttribute('width', newLength);
+                                
+                                // Update wall segment data
+                                const index = wallSegments.findIndex(segment => segment.element === object);
+                                if (index !== -1) {
+                                    wallSegments[index].width = newLength;
+                                }
+                            }
+                        });
+                        
+                        lengthRow.appendChild(lengthInput);
+                        dimensionsGroup.appendChild(lengthRow);
+                    }
+                    
+                    content.appendChild(dimensionsGroup);
+                }
+                
+                // Create appearance section
+                const appearanceGroup = document.createElement('div');
+                appearanceGroup.classList.add('property-group');
+                
+                // Group title
+                const groupTitle = document.createElement('div');
+                groupTitle.classList.add('group-title');
+                groupTitle.textContent = 'Appearance';
+                appearanceGroup.appendChild(groupTitle);
+                
+                // Get material if present (may need to look at children for complex objects)
+                let materialElement = object;
+                if (!object.getAttribute('material') && object.querySelector('[material]')) {
+                    materialElement = object.querySelector('[material]');
+                }
+                
+                const material = materialElement.getAttribute('material') || {};
+                const currentColor = material.color || '#FFFFFF';
+                
+                // Color row
+                const colorRow = document.createElement('div');
+                colorRow.classList.add('property-row');
+                
+                const colorLabel = document.createElement('label');
+                colorLabel.textContent = 'Color';
+                colorRow.appendChild(colorLabel);
+                
+                // Color input
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.value = currentColor;
+                
+                // Update color on change
+                colorInput.addEventListener('input', function() {
+                    materialElement.setAttribute('material', 'color', this.value);
+                });
+                
+                colorRow.appendChild(colorInput);
+                appearanceGroup.appendChild(colorRow);
+                
+                // Color presets
+                const colorOptions = document.createElement('div');
+                colorOptions.classList.add('color-options');
+                
+                const colors = ['#FFFFFF', '#F5F5DC', '#E0E0E0', '#A0522D', '#6082B6', '#4CAF50', '#FFC107', '#FF5722'];
+                
+                colors.forEach(color => {
+                    const option = document.createElement('div');
+                    option.classList.add('color-option');
+                    option.style.backgroundColor = color;
+                    
+                    // Highlight active color
+                    if (color.toUpperCase() === currentColor.toUpperCase()) {
+                        option.classList.add('active');
+                    }
+                    
+                    // Set color on click
+                    option.addEventListener('click', function() {
+                        // Update input value
+                        colorInput.value = color;
+                        
+                        // Apply color to object
+                        materialElement.setAttribute('material', 'color', color);
+                        
+                        // Update active state
+                        document.querySelectorAll('.color-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                    });
+                    
+                    colorOptions.appendChild(option);
+                });
+                
+                appearanceGroup.appendChild(colorOptions);
+                content.appendChild(appearanceGroup);
+                
+                // Show panel
+                panel.style.display = 'block';
+            }
+            
+            function saveDesign() {
+                const design = {
+                    walls: wallSegments.map(segment => ({
+                        start: segment.start,
+                        end: segment.end,
+                        width: segment.width,
+                        rotation: segment.rotation,
+                        isHorizontal: segment.isHorizontal
+                    })),
+                    furniture: Array.from(houseContainer.querySelectorAll('.furniture')).map(furniture => ({
+                        type: getObjectType(furniture),
+                        position: furniture.getAttribute('position'),
+                        rotation: furniture.getAttribute('rotation') || { x: 0, y: 0, z: 0 }
+                    }))
+                };
+                
+                const designJson = JSON.stringify(design, null, 2);
+                
+                // Save to local storage
+                localStorage.setItem('easyHouseDesign', designJson);
+                
+                // Trigger file download
+                const blob = new Blob([designJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'house-design.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showNotification('Design saved successfully!', 'success');
+            }
+            
+            function loadDesign() {
+                const savedDesign = localStorage.getItem('easyHouseDesign');
+                
+                if (!savedDesign) {
+                    showNotification('No saved design found', 'error');
+                    return;
+                }
+                
+                try {
+                    const design = JSON.parse(savedDesign);
+                    applyDesign(design);
+                    showNotification('Design loaded successfully!', 'success');
+                } catch (error) {
+                    console.error('Error loading design:', error);
+                    showNotification('Failed to load design', 'error');
+                }
+            }
+            
+            function applyDesign(design) {
+                // Clear current design
+                houseContainer.innerHTML = '';
+                wallSegments = [];
+                
+                // Add walls
+                design.walls.forEach(wall => {
+                    createWall(wall.start, wall.end);
+                });
+                
+                // Add furniture
+                design.furniture.forEach(item => {
+                    const furniture = document.createElement('a-entity');
+                    furniture.classList.add('interactive', 'furniture', item.type);
+                    furniture.setAttribute('position', item.position);
+                    furniture.setAttribute('rotation', item.rotation);
+                    
+                    const templateId = `${item.type}-template`;
+                    const template = document.getElementById(templateId);
+                    
+                    if (template) {
+                        furniture.innerHTML = template.innerHTML;
+                    } else {
+                        // Placeholder for furniture without templates
+                        const box = document.createElement('a-box');
+                        box.setAttribute('width', 1);
+                        box.setAttribute('height', 0.5);
+                        box.setAttribute('depth', 1);
+                        box.setAttribute('material', 'color: #8B4513');
+                        furniture.appendChild(box);
+                    }
+                    
+                    houseContainer.appendChild(furniture);
+                });
+            }
+            
+            function showNotification(message, type = 'info') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = 'notification'; // Reset classes
+                
+                if (type === 'success') {
+                    notification.classList.add('success');
+                } else if (type === 'error') {
+                    notification.classList.add('error');
+                }
+                
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+            
+            function showGuidance(message) {
+                const guidance = document.getElementById('drawing-guidance');
+                guidance.textContent = message;
+                guidance.style.display = 'block';
+                
+                setTimeout(() => {
+                    guidance.style.display = 'none';
+                }, 5000);
+            }
+            
+            function showHelpDialog() {
+                showNotification('Help dialog not implemented yet', 'info');
+            }
+            
+            function showExportDialog() {
+                showNotification('Export dialog not implemented yet', 'info');
+            }
+        });
+    </script>
 </body>
 </html>

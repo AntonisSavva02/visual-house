@@ -61,12 +61,17 @@ h3 {
     background-color: #e0e0e0;
 }
 
-.item img {
+.item-preview {
     width: 40px;
     height: 40px;
-    object-fit: cover;
+    background-color: #ccc;
     margin-right: 8px;
     border-radius: 3px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    color: #333;
 }
 
 .item span {
@@ -124,10 +129,111 @@ h3 {
     border-color: #3AA3B9;
 }
 
+/* Visual Controls */
+#visual-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 5px;
+    pointer-events: auto;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 300px;
+}
+
+.control-group {
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.control-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.control-row label {
+    font-size: 14px;
+    flex: 1;
+    text-align: center;
+}
+
+.arrow-btn, .scale-btn {
+    width: 40px;
+    height: 30px;
+    border: 1px solid #ddd;
+    background-color: #f5f5f5;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.arrow-btn:hover, .scale-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.action-btn {
+    padding: 8px 15px;
+    background-color: #4CC3D9;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    margin: 0 5px;
+}
+
+.action-btn:hover {
+    background-color: #3AA3B9;
+}
+
+#delete-btn {
+    background-color: #ff6b6b;
+}
+
+#delete-btn:hover {
+    background-color: #ff4f4f;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 1000;
+    transition: opacity 0.3s;
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* For smaller screens */
 @media (max-width: 800px) {
     #sidebar {
         width: 150px;
+    }
+    
+    #visual-controls {
+        width: 250px;
+        font-size: 12px;
+    }
+    
+    .arrow-btn, .scale-btn {
+        width: 35px;
+        height: 25px;
     }
 }
 
