@@ -871,57 +871,31 @@
     <a-scene embedded vr-mode-ui="enabled: true">
         <!-- Assets -->
         <a-assets>
-            <!-- Wall Template -->
-            <a-mixin id="wall-mixin" geometry="primitive: box; height: 2.7; depth: 0.15" 
-                     material="color: #F5F5F5" shadow></a-mixin>
-            
-            <!-- Floor Template -->
-            <a-mixin id="floor-mixin" geometry="primitive: plane" 
-                     material="color: #E8E8E8; side: double" shadow></a-mixin>
-            
-            <!-- Door Template -->
-            <a-mixin id="door-frame-mixin" geometry="primitive: box; height: 2.2; depth: 0.1; width: 1" 
-                     material="color: #8B4513" shadow></a-mixin>
-            <a-mixin id="door-panel-mixin" geometry="primitive: box; height: 2.1; depth: 0.02; width: 0.9" 
-                     material="color: #A0522D" shadow></a-mixin>
-            
-            <!-- Window Template -->
-            <a-mixin id="window-frame-mixin" geometry="primitive: box; height: 1.2; depth: 0.1; width: 1" 
-                     material="color: #8B4513" shadow></a-mixin>
-            <a-mixin id="window-glass-mixin" geometry="primitive: box; height: 1; depth: 0.02; width: 0.8" 
-                     material="color: #87CEEB; opacity: 0.7" shadow></a-mixin>
-            
-            <!-- Living Room Furniture Templates -->
-            <a-mixin id="sofa-mixin" geometry="primitive: box; height: 0.8; depth: 1; width: 2" 
-                     material="color: #4682B4" shadow></a-mixin>
-            <a-mixin id="coffee-table-mixin" geometry="primitive: box; height: 0.4; depth: 0.8; width: 1.2" 
-                     material="color: #8B4513" shadow></a-mixin>
-            <a-mixin id="tv-mixin" geometry="primitive: box; height: 0.8; depth: 0.1; width: 1.4" 
-                     material="color: #2F4F4F" shadow></a-mixin>
-            
-            <!-- Bedroom Furniture Templates -->
-            <a-mixin id="bed-mixin" geometry="primitive: box; height: 0.5; depth: 2; width: 1.6" 
-                     material="color: #8B4513" shadow></a-mixin>
-            <a-mixin id="wardrobe-mixin" geometry="primitive: box; height: 2; depth: 0.6; width: 1.2" 
-                     material="color: #A0522D" shadow></a-mixin>
-            <a-mixin id="nightstand-mixin" geometry="primitive: box; height: 0.5; depth: 0.4; width: 0.4" 
-                     material="color: #8B4513" shadow></a-mixin>
-            
-            <!-- Kitchen Furniture Templates -->
-            <a-mixin id="counter-mixin" geometry="primitive: box; height: 0.9; depth: 0.6; width: 1.8" 
-                     material="color: #A9A9A9" shadow></a-mixin>
-            <a-mixin id="fridge-mixin" geometry="primitive: box; height: 1.8; depth: 0.7; width: 0.8" 
-                     material="color: #D3D3D3" shadow></a-mixin>
-            <a-mixin id="sink-mixin" geometry="primitive: box; height: 0.2; depth: 0.5; width: 0.8" 
-                     material="color: #C0C0C0" shadow></a-mixin>
-            
-            <!-- Bathroom Fixtures Templates -->
-            <a-mixin id="bathtub-mixin" geometry="primitive: box; height: 0.5; depth: 1.7; width: 0.7" 
-                     material="color: #FFFFFF" shadow></a-mixin>
-            <a-mixin id="toilet-mixin" geometry="primitive: box; height: 0.4; depth: 0.6; width: 0.4" 
-                     material="color: #FFFFFF" shadow></a-mixin>
-            <a-mixin id="sink-bathroom-mixin" geometry="primitive: box; height: 0.8; depth: 0.5; width: 0.6" 
-                     material="color: #FFFFFF" shadow></a-mixin>
+            <!-- 3D Models -->
+            <a-asset-item id="wall-model" src="assets/models/wall.gltf"></a-asset-item>
+            <a-asset-item id="floor-model" src="assets/models/floor.gltf"></a-asset-item>
+            <a-asset-item id="door-model" src="assets/models/door.gltf"></a-asset-item>
+            <a-asset-item id="window-model" src="assets/models/window.gltf"></a-asset-item>
+            <a-asset-item id="roof-model" src="assets/models/roof.gltf"></a-asset-item>
+            <a-asset-item id="stairs-model" src="assets/models/stairs.gltf"></a-asset-item>
+
+            <!-- Furniture Models -->
+            <a-asset-item id="sofa-model" src="assets/models/sofa.gltf"></a-asset-item>
+            <a-asset-item id="coffee-table-model" src="assets/models/coffee-table.gltf"></a-asset-item>
+            <a-asset-item id="tv-model" src="assets/models/tv.gltf"></a-asset-item>
+            <a-asset-item id="bed-model" src="assets/models/bed.gltf"></a-asset-item>
+            <a-asset-item id="wardrobe-model" src="assets/models/wardrobe.gltf"></a-asset-item>
+            <a-asset-item id="nightstand-model" src="assets/models/nightstand.gltf"></a-asset-item>
+
+            <!-- Kitchen Models -->
+            <a-asset-item id="counter-model" src="assets/models/counter.gltf"></a-asset-item>
+            <a-asset-item id="fridge-model" src="assets/models/fridge.gltf"></a-asset-item>
+            <a-asset-item id="sink-model" src="assets/models/sink.gltf"></a-asset-item>
+
+            <!-- Bathroom Models -->
+            <a-asset-item id="bathtub-model" src="assets/models/bathtub.gltf"></a-asset-item>
+            <a-asset-item id="toilet-model" src="assets/models/toilet.gltf"></a-asset-item>
+            <a-asset-item id="sink-bathroom-model" src="assets/models/sink-bathroom.gltf"></a-asset-item>
         </a-assets>
         
         <!-- Environment (simple outdoor scene) -->

@@ -1,1682 +1,1440 @@
-// app.js - Main application controller
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize the application
-    const app = new FloorPlanApp();
-    app.init();
-});
+/**
+ * EasyFloor - Interactive House Builder
+ * Main application file
+ */
 
-class FloorPlanApp {
-    constructor() {
-        // Global state variables
-        this.currentTool = 'wall';
-        this.isDrawing = false;
-        this.drawStartPosition = null;
-        this.drawCurrentPosition = null;
-        this.selectedObject = null;
-        this.wallHeight = 2.7; // Fixed wall height (2.7 meters)
-        this.wallThickness = 0.15; // Fixed wall thickness (15cm)
-        this.snapToGrid = true;
-        this.gridSize = 0.5; // Half-meter grid
-        this.wallSegments = []; // Keep track of wall segments
-        this.roomSegments = []; // Track room segments
-        this.selectedFurnitureType = null;
-        
-        // DOM elements
-        this.scene = null;
-        this.camera = null;
-        this.houseContainer = null;
-        this.drawingIndicator = null;
-        this.gridEntity = null;
-        this.objectActions = null;
-        this.propertiesPanel = null;
-        this.catalogPanel = null;
-        this.notification = null;
-        this.guidance = null;
-        this.measurement = null;
-    }
-
-    init() {
-        // Initialize the scene once it's loaded
-        this.scene = document.querySelector('a-scene');
-        this.scene.addEventListener('loaded', () => this.sceneLoaded());
-        
-        // Setup UI handlers immediately (no need to wait for scene)
-        this.setupUIHandlers();
-    }
-
-    sceneLoaded() {
-        console.log('A-Frame scene loaded');
-        
-        // Get references to scene elements
-        this.camera = document.getElementById('camera');
-        this.houseContainer = document.getElementById('house-container');
-        this.drawingIndicator = document.getElementById('drawing-indicator');
-        this.gridEntity = document.getElementById('grid');
-        
-        // Get references to UI elements
-        this.objectActions = document.getElementById('object-actions');
-        this.propertiesPanel = document.getElementById('properties');
-        this.catalogPanel = document.getElementById('catalog');
-        this.notification = document.getElementById('notification');
-        this.guidance = document.getElementById('drawing-guidance');
-        this.measurement = document.getElementById('measurement');
-        
-        // Create grid for reference
-        this.createGrid();
-        
-        // Setup event handlers
-        this.setupToolbar();
-        this.setupSceneEvents();
-        
-        // Show initial guidance
-        this.showGuidance('Click and drag to draw walls');
-    }
-
-    createGrid() {
-        const gridSize = 30; // Total grid size in meters
-        const gridInterval = 1; // 1-meter grid
-        const gridLineCount = gridSize / gridInterval;
-        const gridColor = '#555555';
-        
-        // Create lines along x-axis
-        for (let i = 0; i <= gridLineCount; i++) {
-            const linePos = (i * gridInterval) - (gridSize / 2);
-            const line = document.createElement('a-entity');
-            line.setAttribute('geometry', {
-                primitive: 'plane',
-                width: 0.02,
-                height: gridSize
-            });
-            line.setAttribute('material', {
-                color: gridColor,
-                opacity: 0.2,
-                transparent: true
-            });
-            line.setAttribute('position', {
-                x: linePos,
-                y: 0,
-                z: 0
-            });
-            line.setAttribute('rotation', {
-                x: -90,
-                y: 0,
-                z: 0
-            });
-            line.classList.add('grid-line');
-            this.gridEntity.appendChild(line);
-        }
-        
-        // Create lines along z-axis
-        for (let i = 0; i <= gridLineCount; i++) {
-            const linePos = (i * gridInterval) - (gridSize / 2);
-            const line = document.createElement('a-entity');
-            line.setAttribute('geometry', {
-                primitive: 'plane',
-                width: gridSize,
-                height: 0.02
-            });
-            line.setAttribute('material', {
-                color: gridColor,
-                opacity: 0.2,
-                transparent: true
-            });
-            line.setAttribute('position', {
-                x: 0,
-                y: 0,
-                z: linePos
-            });
-            line.setAttribute('rotation', {
-                x: -90,
-                y: 0,
-                z: 0
-            });
-            line.classList.add('grid-line');
-            this.gridEntity.appendChild(line);
-        }
-    }
-
-    setupToolbar() {
-        // Tool selection
-        const toolButtons = document.querySelectorAll('.tool-btn');
-        toolButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Update active tool
-                const tool = e.currentTarget.id.split('-')[0];
-                this.currentTool = tool;
-                
-                // Update button states
-                toolButtons.forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                
-                // Show appropriate guidance based on tool
-                this.updateGuidanceForTool(tool);
-                
-                // Deselect any currently selected object
-                if (this.selectedObject) {
-                    this.unhighlightObject(this.selectedObject);
-                    this.selectedObject = null;
-                    this.hideObjectActions();
-                }
-            });
-        });
-    }
+// Global state
+const APP = {
+    mode: 'build', // build, decorate, edit, move, erase
+    selectedItem: null,
+    selectedElement: null,
+    isPlacing: false,
+    dragStartPosition: { x: 0, y: 0 },
+    currentPosition: { x: 0, y: 0 },
+    placementValid: true,
+    gridSize: 0.5, // Grid size in meters
+    gridVisible: false,
+    objects: [], // All placed objects
+    currentRotation: 0,
+    currentScale: { x: 1, y: 1, z: 1 },
+    view: '3d', // 2d or 3d
+    undoStack: [],
+    redoStack: [],
+    lastSaved: null,
+    defaultHeight: 0, // For placing objects on the ground
+    viewHeight: 15, // Default camera height
+    selectionBox: null,
     
-    updateGuidanceForTool(tool) {
-        switch(tool) {
-            case 'wall':
-                this.showGuidance('Click and drag to draw walls');
-                break;
-            case 'door':
-                this.showGuidance('Click on a wall to add a door');
-                break;
-            case 'window':
-                this.showGuidance('Click on a wall to add a window');
-                break;
-            case 'room':
-                this.showGuidance('Click to auto-detect room from walls');
-                break;
-            case 'furniture':
-                this.showGuidance('Select furniture from the catalog');
-                break;
-            case 'paint':
-                this.showGuidance('Click on objects to change their color');
-                break;
-            case 'select':
-                this.showGuidance('Click objects to select and edit them');
-                break;
-            case 'delete':
-                this.showGuidance('Click objects to delete them');
-                break;
-        }
-    }
-
-    setupSceneEvents() {
-        // Mouse down event for starting wall drawing
-        this.scene.addEventListener('mousedown', (evt) => {
-            if (this.currentTool !== 'wall' || this.isDrawing) return;
-            
-            // Make sure we're clicking on the ground
-            if (evt.detail.intersection && evt.detail.intersection.object.el.id === 'ground') {
-                this.isDrawing = true;
+    // Initialize the application
+    init() {
+        this.setupEventListeners();
+        this.setupGrid();
+        this.loadSavedDesign();
+        this.createSelectionBox();
+        this.updateUI();
+        
+        // Initialize collision manager
+        CollisionManager.init();
+        
+        // Initialize camera controller
+        CameraController.init();
+        
+        // Show notification
+        this.showNotification('Welcome to EasyFloor! Start by selecting an item from the panel.', 'info');
+    },
+    
+    setupEventListeners() {
+        // Mode buttons
+        document.getElementById('build-btn').addEventListener('click', () => this.setMode('build'));
+        document.getElementById('decorate-btn').addEventListener('click', () => this.setMode('decorate'));
+        document.getElementById('edit-btn').addEventListener('click', () => this.setMode('edit'));
+        document.getElementById('move-btn').addEventListener('click', () => this.setMode('move'));
+        document.getElementById('erase-btn').addEventListener('click', () => this.setMode('erase'));
+        
+        // View controls
+        document.getElementById('view-2d').addEventListener('click', () => this.setView('2d'));
+        document.getElementById('view-3d').addEventListener('click', () => this.setView('3d'));
+        document.getElementById('zoom-in').addEventListener('click', () => CameraController.zoomIn());
+        document.getElementById('zoom-out').addEventListener('click', () => CameraController.zoomOut());
+        
+        // Category tabs
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.category-tab').forEach(tab => tab.classList.remove('active'));
+                e.target.classList.add('active');
                 
-                // Get start position and snap to grid if enabled
-                const point = evt.detail.intersection.point;
-                this.drawStartPosition = this.snapToGrid ? this.snapPointToGrid(point) : point;
-                
-                // Create drawing indicator
-                this.createDrawingIndicator(this.drawStartPosition);
-                
-                // Show measurement display
-                this.measurement.style.display = 'block';
-            }
+                // Here you would update the category content based on the selected tab
+                // For now we'll just log the tab name
+                console.log(`Selected tab: ${e.target.dataset.tab}`);
+            });
         });
         
-        // Mouse move event for updating wall preview while drawing
-        this.scene.addEventListener('mousemove', (evt) => {
-            if (!this.isDrawing) return;
-            
-            if (evt.detail.intersection) {
-                // Get current position and snap to grid if enabled
-                const point = evt.detail.intersection.point;
-                this.drawCurrentPosition = this.snapToGrid ? this.snapPointToGrid(point) : point;
+        // Item selection
+        document.querySelectorAll('.item-card').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const itemCard = e.target.closest('.item-card');
+                document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
+                itemCard.classList.add('active');
                 
-                // Update drawing indicator
-                this.updateDrawingIndicator(this.drawStartPosition, this.drawCurrentPosition);
-                
-                // Update measurement display
-                this.updateMeasurement(this.drawStartPosition, this.drawCurrentPosition);
-            }
+                this.selectedItem = itemCard.dataset.item;
+                this.prepareObjectPlacement(this.selectedItem);
+            });
         });
         
-        // Mouse up event for finalizing wall creation
-        this.scene.addEventListener('mouseup', () => {
-            if (!this.isDrawing) return;
-            
-            // Only create wall if we have both positions and they're different
-            if (this.drawStartPosition && this.drawCurrentPosition &&
-                (this.drawStartPosition.x !== this.drawCurrentPosition.x || 
-                 this.drawStartPosition.z !== this.drawCurrentPosition.z)) {
-                
-                // Create the actual wall
-                this.createWall(this.drawStartPosition, this.drawCurrentPosition);
-            }
-            
-            // Reset drawing state
-            this.isDrawing = false;
-            this.drawStartPosition = null;
-            this.drawCurrentPosition = null;
-            
-            // Remove drawing indicator
-            this.removeDrawingIndicator();
-            
-            // Hide measurement display
-            this.measurement.style.display = 'none';
-        });
+        // Placement controls
+        document.getElementById('place-cancel').addEventListener('click', () => this.cancelPlacement());
+        document.getElementById('place-rotate').addEventListener('click', () => this.rotateObject());
+        document.getElementById('place-confirm').addEventListener('click', () => this.confirmPlacement());
         
-        // Handle clicks on interactive objects
-        this.scene.addEventListener('click', (evt) => {
-            // Skip if we're in drawing mode
-            if (this.isDrawing) return;
-            
-            // Check if we clicked on the ground and we're in furniture placement mode
-            if (this.currentTool === 'furniture' && this.selectedFurnitureType &&
-                evt.detail.intersection && evt.detail.intersection.object.el.id === 'ground') {
-                
-                const position = this.snapToGrid ? 
-                    this.snapPointToGrid(evt.detail.intersection.point) : 
-                    evt.detail.intersection.point;
-                
-                this.placeFurniture(this.selectedFurnitureType, position);
-                return;
-            }
-            
-            // Check if we clicked on an interactive object
-            if (evt.detail.intersection && evt.detail.intersection.object.el.classList.contains('interactive')) {
-                const clickedObject = evt.detail.intersection.object.el;
-                
-                // Handle based on current tool
-                this.handleObjectClick(clickedObject, evt.detail.intersection);
-            }
-        });
-    }
-
-    setupUIHandlers() {
+        // Save/load/export buttons
+        document.getElementById('save-btn').addEventListener('click', () => this.saveDesign());
+        document.getElementById('load-btn').addEventListener('click', () => this.loadDesign());
+        document.getElementById('export-btn').addEventListener('click', () => this.exportDesign());
+        
         // Properties panel close button
         document.getElementById('properties-close').addEventListener('click', () => {
-            this.propertiesPanel.style.display = 'none';
+            document.getElementById('properties-panel').style.display = 'none';
         });
         
-        // Catalog tab switching
-        const catalogTabs = document.querySelectorAll('.catalog-tab');
-        catalogTabs.forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                // Update active tab
-                catalogTabs.forEach(t => t.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                
-                // Filter catalog content based on selected tab
-                const tabType = e.currentTarget.getAttribute('data-tab');
-                this.filterCatalogItems(tabType);
-                
-                this.showNotification(`Switched to ${e.currentTarget.textContent} tab`);
+        // A-Frame scene events for mouse interaction
+        const scene = document.querySelector('a-scene');
+        
+        scene.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        scene.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        scene.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        
+        // Touch events for mobile
+        scene.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        scene.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+        scene.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+        
+        // Object menu event listeners
+        document.getElementById('edit-btn').addEventListener('click', () => this.editSelectedObject());
+        document.getElementById('rotate-btn').addEventListener('click', () => this.rotateSelectedObject());
+        document.getElementById('duplicate-btn').addEventListener('click', () => this.duplicateSelectedObject());
+        document.getElementById('delete-btn').addEventListener('click', () => this.deleteSelectedObject());
+        
+        // Context menu for objects
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('a-entity') && e.target.closest('a-entity').classList.contains('interactive')) {
+                e.preventDefault();
+                this.showObjectMenu(e);
+            }
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' && this.selectedElement) {
+                this.deleteSelectedObject();
+            }
+            else if (e.key === 'Escape') {
+                if (this.isPlacing) {
+                    this.cancelPlacement();
+                } else if (this.selectedElement) {
+                    this.deselectObject();
+                }
+            }
+            else if (e.key === 'r' && this.selectedElement) {
+                this.rotateSelectedObject();
+            }
+            else if (e.ctrlKey && e.key === 'z') {
+                this.undo();
+            }
+            else if (e.ctrlKey && e.key === 'y') {
+                this.redo();
+            }
+            else if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                this.saveDesign();
+            }
+        });
+    },
+    
+    setupGrid() {
+        const grid = document.getElementById('grid');
+        const size = 20; // Grid size in meters
+        const divisions = size / this.gridSize;
+        
+        // Create grid lines
+        for (let i = -size/2; i <= size/2; i += this.gridSize) {
+            // X axis lines
+            const xLine = document.createElement('a-entity');
+            xLine.setAttribute('line', `start: ${i} 0.01 ${-size/2}; end: ${i} 0.01 ${size/2}; color: #BBBBBB; opacity: 0.3`);
+            grid.appendChild(xLine);
+            
+            // Z axis lines
+            const zLine = document.createElement('a-entity');
+            zLine.setAttribute('line', `start: ${-size/2} 0.01 ${i}; end: ${size/2} 0.01 ${i}; color: #BBBBBB; opacity: 0.3`);
+            grid.appendChild(zLine);
+        }
+    },
+    
+    createSelectionBox() {
+        // Create a selection box for highlighting selected objects
+        const scene = document.querySelector('a-scene');
+        this.selectionBox = document.createElement('a-entity');
+        this.selectionBox.setAttribute('id', 'selection-box');
+        this.selectionBox.setAttribute('visible', 'false');
+        scene.appendChild(this.selectionBox);
+    },
+    
+    setMode(mode) {
+        this.mode = mode;
+        
+        // Update UI to reflect the current mode
+        document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`${mode}-btn`).classList.add('active');
+        
+        // Deselect current object if in erase mode
+        if (mode === 'erase') {
+            this.deselectObject();
+            this.showNotification('Erase mode: Click on objects to remove them', 'info');
+        } else if (mode === 'move') {
+            this.showNotification('Move mode: Click and drag objects to reposition them', 'info');
+        } else if (mode === 'edit') {
+            this.showNotification('Edit mode: Click on objects to modify their properties', 'info');
+        } else {
+            document.getElementById('properties-panel').style.display = 'none';
+        }
+        
+        // Show or hide category panel based on mode
+        if (mode === 'build' || mode === 'decorate') {
+            document.getElementById('category-panel').style.display = 'flex';
+            
+            // Show the appropriate tab based on mode
+            if (mode === 'build') {
+                document.querySelector('[data-tab="structures"]').click();
+            } else {
+                document.querySelector('[data-tab="furniture"]').click();
+            }
+        } else {
+            document.getElementById('category-panel').style.display = 'none';
+        }
+    },
+    
+    setView(view) {
+        this.view = view;
+        
+        // Update UI to reflect the current view
+        document.querySelectorAll('#view-2d, #view-3d').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        
+        // Adjust camera position and rotation based on view
+        if (view === '2d') {
+            CameraController.set2DView();
+        } else {
+            CameraController.set3DView();
+        }
+    },
+    
+    prepareObjectPlacement(objectType) {
+        this.isPlacing = true;
+        this.currentRotation = 0;
+        
+        // Get object details from models
+        const objectData = MODELS[objectType] || MODELS['wall']; // Default to wall if not found
+        
+        // Create temporary object for placement preview
+        const indicator = document.getElementById('placement-indicator');
+        indicator.innerHTML = ''; // Clear previous contents
+        
+        // Create object based on type
+        const obj = this.createObject(objectType, {
+            position: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: objectData.defaultScale || { x: 1, y: 1, z: 1 }
+        });
+        
+        // Set material to indicate placement validity
+        if (objectData.model) {
+            // For models, we need to add a semi-transparent overlay
+            const overlay = document.createElement('a-entity');
+            overlay.setAttribute('geometry', `primitive: box; width: ${objectData.boundingBox.width}; height: ${objectData.boundingBox.height}; depth: ${objectData.boundingBox.depth}`);
+            overlay.setAttribute('material', 'opacity: 0.4; color: #19EFAA; wireframe: true');
+            overlay.setAttribute('class', 'placement-overlay');
+            obj.appendChild(overlay);
+        } else {
+            // For primitive objects, just set the opacity
+            obj.querySelectorAll('[material]').forEach(el => {
+                el.setAttribute('material', 'opacity', 0.6);
             });
-        });
+        }
         
-        // Catalog item selection
-        const catalogItems = document.querySelectorAll('.catalog-item');
-        catalogItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                const furnitureType = e.currentTarget.getAttribute('data-item');
+        obj.setAttribute('shadow', 'cast: true; receive: false');
+        
+        indicator.appendChild(obj);
+        indicator.setAttribute('visible', true);
+        
+        // Show placement controls
+        document.getElementById('placement-controls').classList.add('show');
+        
+        // Show placement guide
+        const placementGuide = document.getElementById('placement-guide');
+        placementGuide.querySelector('.text').textContent = `Click to place ${objectData.displayName || objectType}`;
+        placementGuide.classList.add('show');
+        
+        // Show grid overlay
+        document.getElementById('grid-overlay').classList.add('show');
+        this.gridVisible = true;
+    },
+    
+    createObject(type, options = {}) {
+        const objectData = MODELS[type];
+        if (!objectData) return null;
+        
+        const entity = document.createElement('a-entity');
+        
+        // Set common attributes
+        entity.setAttribute('class', 'interactive collidable');
+        entity.setAttribute('data-type', type);
+        
+        // Set position, rotation, and scale
+        if (options.position) {
+            entity.setAttribute('position', options.position);
+        }
+        
+        if (options.rotation) {
+            entity.setAttribute('rotation', options.rotation);
+        }
+        
+        if (options.scale) {
+            entity.setAttribute('scale', options.scale);
+        }
+        
+        // If this is a model-based object
+        if (objectData.model) {
+            // Create model entity
+            entity.setAttribute('gltf-model', objectData.model);
+            entity.setAttribute('shadow', 'cast: true; receive: true');
+            
+            // Store current material color for later changes
+            entity.setAttribute('data-color', objectData.materials[0]);
+        } 
+        // Fall back to component-based or primitive creation if no model specified
+        else if (objectData.components) {
+            objectData.components.forEach(component => {
+                const elem = document.createElement('a-entity');
                 
-                // Switch to furniture placement mode
-                this.currentTool = 'furniture';
-                document.querySelectorAll('.tool-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                    if (btn.id === 'furniture-tool') {
-                        btn.classList.add('active');
+                // Copy all attributes from the component
+                Object.entries(component).forEach(([key, value]) => {
+                    if (key !== 'children') {
+                        elem.setAttribute(key, value);
                     }
                 });
                 
-                // Set the selected furniture type
-                this.selectedFurnitureType = furnitureType;
+                // Add children if any
+                if (component.children) {
+                    component.children.forEach(child => {
+                        const childElem = document.createElement('a-entity');
+                        
+                        Object.entries(child).forEach(([key, value]) => {
+                            childElem.setAttribute(key, value);
+                        });
+                        
+                        elem.appendChild(childElem);
+                    });
+                }
                 
-                this.showGuidance(`Click to place ${furnitureType}`);
-                this.showNotification(`Selected ${furnitureType}. Click to place.`, 'success');
+                entity.appendChild(elem);
             });
-        });
+        } else {
+            // Simple geometry for basic objects
+            entity.setAttribute('geometry', objectData.geometry);
+            entity.setAttribute('material', objectData.material);
+        }
         
-        // Object action buttons
-        document.getElementById('rotate-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.selectedObject) {
-                this.rotateObject(this.selectedObject);
-            }
-        });
-        
-        document.getElementById('edit-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.selectedObject) {
-                this.showPropertiesPanel(this.selectedObject);
-            }
-        });
-        
-        document.getElementById('remove-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.selectedObject) {
-                this.deleteObject(this.selectedObject);
-            }
-        });
-        
-        // Save and load buttons
-        document.getElementById('save-btn').addEventListener('click', () => {
-            this.saveDesign();
-        });
-        
-        document.getElementById('load-btn').addEventListener('click', () => {
-            this.loadDesign();
-        });
-        
-        // Export button
-        document.getElementById('export-btn').addEventListener('click', () => {
-            this.exportDesign();
-        });
-        
-        // Help button
-        document.getElementById('help-btn').addEventListener('click', () => {
-            this.showHelp();
-        });
-    }
-
-    // Utility methods
+        return entity;
+    },
     
-    snapPointToGrid(point) {
-        return {
-            x: Math.round(point.x / this.gridSize) * this.gridSize,
-            y: point.y,
-            z: Math.round(point.z / this.gridSize) * this.gridSize
+    handleMouseDown(event) {
+        // Store starting position
+        const intersection = event.detail.intersection;
+        if (!intersection) return;
+        
+        this.dragStartPosition = {
+            x: intersection.point.x,
+            y: intersection.point.y,
+            z: intersection.point.z
         };
-    }
-    
-    createDrawingIndicator(startPos) {
-        // Remove any existing indicator
-        this.removeDrawingIndicator();
         
-        // Create new indicator entity
-        const indicator = document.createElement('a-entity');
-        indicator.id = 'wall-preview';
-        
-        // Create a cylinder for start point
-        const startPoint = document.createElement('a-cylinder');
-        startPoint.setAttribute('radius', 0.1);
-        startPoint.setAttribute('height', 0.1);
-        startPoint.setAttribute('color', '#4CC3D9');
-        startPoint.setAttribute('position', {
-            x: startPos.x,
-            y: 0.05,
-            z: startPos.z
-        });
-        
-        indicator.appendChild(startPoint);
-        this.drawingIndicator.appendChild(indicator);
-        this.drawingIndicator.setAttribute('visible', 'true');
-    }
-    
-    updateDrawingIndicator(startPos, endPos) {
-        // First, make sure the indicator is visible
-        this.drawingIndicator.setAttribute('visible', 'true');
-        
-        // Get the wall preview entity
-        const wallPreview = document.getElementById('wall-preview');
-        if (!wallPreview) return;
-        
-        // Calculate wall dimensions
-        const dx = endPos.x - startPos.x;
-        const dz = endPos.z - startPos.z;
-        const length = Math.sqrt(dx * dx + dz * dz);
-        const angle = Math.atan2(dz, dx) * (180 / Math.PI);
-        
-        // Create or update the wall preview line
-        let line = wallPreview.querySelector('.preview-line');
-        if (!line) {
-            line = document.createElement('a-entity');
-            line.classList.add('preview-line');
-            wallPreview.appendChild(line);
+        // Handle different modes
+        if (this.isPlacing) {
+            // When placing, clicks handle confirmations
+        } 
+        else if (this.mode === 'move' && event.target.classList.contains('interactive')) {
+            // Select and start moving the clicked object
+            this.selectedElement = event.target.closest('.interactive');
+            this.selectObject(this.selectedElement);
+            this.isDragging = true;
         }
-        
-        // Position the preview wall in the middle of the start and end points
-        const midX = (startPos.x + endPos.x) / 2;
-        const midZ = (startPos.z + endPos.z) / 2;
-        
-        // Set the line's properties
-        line.setAttribute('geometry', {
-            primitive: 'box',
-            width: length,
-            height: this.wallHeight,
-            depth: this.wallThickness
-        });
-        
-        line.setAttribute('material', {
-            color: '#4CC3D9',
-            opacity: 0.5,
-            transparent: true
-        });
-        
-        line.setAttribute('position', {
-            x: midX,
-            y: this.wallHeight / 2,
-            z: midZ
-        });
-        
-        line.setAttribute('rotation', {
-            x: 0,
-            y: angle,
-            z: 0
-        });
-        
-        // Create or update end point indicator
-        let endPoint = wallPreview.querySelector('.end-point');
-        if (!endPoint) {
-            endPoint = document.createElement('a-cylinder');
-            endPoint.classList.add('end-point');
-            wallPreview.appendChild(endPoint);
+        else if (this.mode === 'edit' && event.target.classList.contains('interactive')) {
+            // Select the object and show properties panel
+            this.selectedElement = event.target.closest('.interactive');
+            this.selectObject(this.selectedElement);
+            this.showPropertiesPanel();
         }
-        
-        endPoint.setAttribute('radius', 0.1);
-        endPoint.setAttribute('height', 0.1);
-        endPoint.setAttribute('color', '#4CC3D9');
-        endPoint.setAttribute('position', {
-            x: endPos.x,
-            y: 0.05,
-            z: endPos.z
-        });
-    }
-    
-    removeDrawingIndicator() {
-        const indicator = document.getElementById('wall-preview');
-        if (indicator) {
-            indicator.remove();
+        else if (this.mode === 'erase' && event.target.classList.contains('interactive')) {
+            // Delete the clicked object
+            this.selectedElement = event.target.closest('.interactive');
+            this.deleteObject(this.selectedElement);
         }
-        this.drawingIndicator.setAttribute('visible', 'false');
-    }
-    
-    updateMeasurement(startPos, endPos) {
-        const dx = endPos.x - startPos.x;
-        const dz = endPos.z - startPos.z;
-        const length = Math.sqrt(dx * dx + dz * dz);
-        
-        this.measurement.textContent = `Length: ${length.toFixed(2)}m`;
-        this.measurement.style.display = 'block';
-    }
-    
-    createWall(startPos, endPos) {
-        // Calculate wall dimensions
-        const dx = endPos.x - startPos.x;
-        const dz = endPos.z - startPos.z;
-        const length = Math.sqrt(dx * dx + dz * dz);
-        const angle = Math.atan2(dz, dx) * (180 / Math.PI);
-        
-        // Create wall entity
-        const wall = document.createElement('a-entity');
-        wall.classList.add('interactive', 'wall');
-        wall.setAttribute('data-type', 'wall');
-        wall.setAttribute('data-length', length);
-        wall.setAttribute('data-orientation', angle);
-        
-        // Position the wall in the middle of the start and end points
-        const midX = (startPos.x + endPos.x) / 2;
-        const midZ = (startPos.z + endPos.z) / 2;
-        
-        // Create the wall mesh
-        const wallMesh = document.createElement('a-box');
-        wallMesh.setAttribute('width', length);
-        wallMesh.setAttribute('height', this.wallHeight);
-        wallMesh.setAttribute('depth', this.wallThickness);
-        wallMesh.setAttribute('color', '#F5F5F5');
-        wallMesh.setAttribute('material', 'color: #F5F5F5');
-        wallMesh.classList.add('collidable');
-        
-        // Add the mesh to the wall entity
-        wall.appendChild(wallMesh);
-        
-        // Position and rotate the wall
-        wall.setAttribute('position', {
-            x: midX,
-            y: this.wallHeight / 2,
-            z: midZ
-        });
-        
-        wall.setAttribute('rotation', {
-            x: 0,
-            y: angle,
-            z: 0
-        });
-        
-        // Store wall segment data for room detection
-        this.wallSegments.push({
-            start: { x: startPos.x, z: startPos.z },
-            end: { x: endPos.x, z: endPos.z },
-            length: length,
-            angle: angle,
-            entity: wall
-        });
-        
-        // Add wall to house container
-        this.houseContainer.appendChild(wall);
-        
-        // Show notification
-        this.showNotification('Wall added successfully!', 'success');
-    }
-    
-    handleObjectClick(object, intersection) {
-        const objectType = object.classList.contains('wall') ? 'wall' : 
-                          object.classList.contains('door') ? 'door' :
-                          object.classList.contains('window') ? 'window' :
-                          object.classList.contains('furniture') ? 'furniture' : 'unknown';
-        
-        switch(this.currentTool) {
-            case 'select':
-                this.selectObject(object, intersection);
-                break;
-            case 'delete':
-                this.deleteObject(object);
-                break;
-            case 'door':
-                if (objectType === 'wall') {
-                    this.addDoorToWall(object, intersection);
-                } else {
-                    this.showNotification('Doors can only be added to walls', 'error');
-                }
-                break;
-            case 'window':
-                if (objectType === 'wall') {
-                    this.addWindowToWall(object, intersection);
-                } else {
-                    this.showNotification('Windows can only be added to walls', 'error');
-                }
-                break;
-            case 'paint':
-                this.showColorOptions(object);
-                break;
-            case 'furniture':
-                // Don't do anything when clicking an object in furniture mode
-                break;
+        else if (event.target.closest('#ground')) {
+            // Clicked on ground - deselect any selected object
+            this.deselectObject();
         }
-    }
+    },
     
-    selectObject(object, intersection) {
-        // Deselect previously selected object if any
-        if (this.selectedObject) {
-            this.unhighlightObject(this.selectedObject);
-        }
+    handleMouseMove(event) {
+        const intersection = event.detail.intersection;
+        if (!intersection) return;
         
-        // Select new object
-        this.selectedObject = object;
-        this.highlightObject(object);
+        this.currentPosition = {
+            x: intersection.point.x,
+            y: intersection.point.y,
+            z: intersection.point.z
+        };
         
-        // Show object actions near the object
-        this.showObjectActions(object, intersection);
-    }
-    
-    highlightObject(object) {
-        // Add highlight effect
-        const highlightColor = '#4CC3D9';
-        
-        if (object.hasAttribute('material')) {
-            // Store original color
-            const originalColor = object.getAttribute('material').color;
-            object.setAttribute('data-original-color', originalColor);
+        if (this.isPlacing) {
+            // Update position of placement indicator
+            const indicator = document.getElementById('placement-indicator');
             
-            // Apply highlight color
-            object.setAttribute('material', 'color', highlightColor);
-        } else {
-            // For composite objects, highlight all child meshes
-            const meshes = object.querySelectorAll('[material]');
-            meshes.forEach(mesh => {
-                const originalColor = mesh.getAttribute('material').color;
-                mesh.setAttribute('data-original-color', originalColor);
-                mesh.setAttribute('material', 'color', highlightColor);
-            });
-        }
-        
-        // Add wireframe or outline effect (simplified for this demo)
-        object.setAttribute('data-selected', 'true');
-    }
-    
-    unhighlightObject(object) {
-        // Remove highlight effect
-        if (object.hasAttribute('material') && object.hasAttribute('data-original-color')) {
-            // Restore original color
-            const originalColor = object.getAttribute('data-original-color');
-            object.setAttribute('material', 'color', originalColor);
-            object.removeAttribute('data-original-color');
-        } else {
-            // For composite objects, restore all child meshes
-            const meshes = object.querySelectorAll('[material]');
-            meshes.forEach(mesh => {
-                if (mesh.hasAttribute('data-original-color')) {
-                    const originalColor = mesh.getAttribute('data-original-color');
-                    mesh.setAttribute('material', 'color', originalColor);
-                    mesh.removeAttribute('data-original-color');
-                }
-            });
-        }
-        
-        // Remove wireframe or outline effect
-        object.removeAttribute('data-selected');
-    }
-    
-    showObjectActions(object, intersection) {
-        // Get object position in 3D space
-        const objectPos = object.getAttribute('position');
-        
-        // Convert to screen coordinates
-        const canvas = document.querySelector('canvas');
-        const camera = document.getElementById('camera');
-        
-        // Position the actions menu slightly above the object
-        const actionsY = objectPos.y + (object.classList.contains('wall') ? this.wallHeight : 1);
-        const tempPos = { x: objectPos.x, y: actionsY, z: objectPos.z };
-        
-        // Simple way to position overlay UI near the 3D object
-        // For a real implementation, you'd use proper 3D->2D coordinate conversion
-        const objectRect = object.getBoundingClientRect();
-        
-        // Show the actions menu
-        this.objectActions.style.display = 'flex';
-        this.objectActions.style.left = `${objectRect.left + (objectRect.width / 2) - 50}px`;
-        this.objectActions.style.top = `${objectRect.top - 50}px`;
-    }
-    
-    hideObjectActions() {
-        this.objectActions.style.display = 'none';
-    }
-    
-    deleteObject(object) {
-        // Find and remove the object from appropriate tracking arrays
-        if (object.classList.contains('wall')) {
-            this.removeWallSegment(object);
-        }
-        
-        // Remove the object from the scene
-        object.parentNode.removeChild(object);
-        
-        // Reset selection state
-        this.selectedObject = null;
-        this.hideObjectActions();
-        
-        // Show notification
-        this.showNotification('Object deleted', 'success');
-    }
-    
-    removeWallSegment(wallEntity) {
-        // Find and remove the wall from wallSegments array
-        const index = this.wallSegments.findIndex(segment => segment.entity === wallEntity);
-        if (index !== -1) {
-            this.wallSegments.splice(index, 1);
-        }
-    }
-    
-    rotateObject(object) {
-        // Get current rotation
-        const currentRotation = object.getAttribute('rotation');
-        
-        // Rotate by 90 degrees around y-axis
-        const newYRotation = (currentRotation.y + 90) % 360;
-        
-        // Apply new rotation
-        object.setAttribute('rotation', {
-            x: currentRotation.x,
-            y: newYRotation,
-            z: currentRotation.z
-        });
-        
-        this.showNotification('Object rotated 90°', 'success');
-    }
-    
-    addDoorToWall(wall, intersection) {
-        // Get wall dimensions and position
-        const wallWidth = parseFloat(wall.getAttribute('data-length'));
-        const wallPosition = wall.getAttribute('position');
-        const wallRotation = wall.getAttribute('rotation');
-        
-        // Create door entity
-        const door = document.createElement('a-entity');
-        door.classList.add('interactive', 'door');
-        door.setAttribute('data-type', 'door');
-        
-        // Get the template content
-        const template = document.getElementById('door-template');
-        const templateHTML = template.innerHTML;
-        
-        // Parse the template HTML and create elements from it
-        const tempContainer = document.createElement('div');
-        tempContainer.innerHTML = templateHTML;
-        
-        // Extract the content from the template
-        const templateParts = tempContainer.querySelectorAll('*');
-        templateParts.forEach(part => {
-            const el = document.createElement(part.tagName);
+            // Snap to grid
+            const snappedPos = this.snapToGrid(this.currentPosition);
+            indicator.setAttribute('position', snappedPos);
             
-            // Copy all attributes
-            Array.from(part.attributes).forEach(attr => {
-                el.setAttribute(attr.name, attr.value);
-            });
+            // Set rotation
+            indicator.setAttribute('rotation', { x: 0, y: this.currentRotation, z: 0 });
             
-            door.appendChild(el);
-        });
-        
-        // Position the door
-        // For simplicity, we'll place it in the middle of the wall
-        door.setAttribute('position', wallPosition);
-        door.setAttribute('rotation', wallRotation);
-        
-        // Add door to house container
-        this.houseContainer.appendChild(door);
-        
-        // Show notification
-        this.showNotification('Door added to wall', 'success');
-    }
-    
-    addWindowToWall(wall, intersection) {
-        // Get wall dimensions and position
-        const wallWidth = parseFloat(wall.getAttribute('data-length'));
-        const wallPosition = wall.getAttribute('position');
-        const wallRotation = wall.getAttribute('rotation');
-        
-        // Create window entity
-        const windowEntity = document.createElement('a-entity');
-        windowEntity.classList.add('interactive', 'window');
-        windowEntity.setAttribute('data-type', 'window');
-        
-        // Get the template content
-        const template = document.getElementById('window-template');
-        const templateHTML = template.innerHTML;
-        
-        // Parse the template HTML and create elements from it
-        const tempContainer = document.createElement('div');
-        tempContainer.innerHTML = templateHTML;
-        
-        // Extract the content from the template
-        const templateParts = tempContainer.querySelectorAll('*');
-        templateParts.forEach(part => {
-            const el = document.createElement(part.tagName);
+            // Check for collisions
+            const objectType = indicator.firstChild.dataset.type;
+            const objectData = MODELS[objectType];
             
-            // Copy all attributes
-            Array.from(part.attributes).forEach(attr => {
-                el.setAttribute(attr.name, attr.value);
-            });
-            
-            windowEntity.appendChild(el);
-        });
-        
-        // Position the window
-        // For simplicity, we'll place it in the middle of the wall
-        windowEntity.setAttribute('position', wallPosition);
-        windowEntity.setAttribute('rotation', wallRotation);
-        
-        // Add window to house container
-        this.houseContainer.appendChild(windowEntity);
-        
-        // Show notification
-        this.showNotification('Window added to wall', 'success');
-    }
-    
-    placeFurniture(furnitureType, position) {
-        // Create furniture entity
-        const furniture = document.createElement('a-entity');
-        furniture.classList.add('interactive', 'furniture', furnitureType);
-        furniture.setAttribute('data-type', 'furniture');
-        furniture.setAttribute('data-furniture-type', furnitureType);
-        
-        // Get the template content
-        const template = document.getElementById(`${furnitureType}-template`);
-        if (!template) {
-            this.showNotification(`No template found for ${furnitureType}`, 'error');
-            return;
-        }
-        
-        const templateHTML = template.innerHTML;
-        
-        // Parse the template HTML and create elements from it
-        const tempContainer = document.createElement('div');
-        tempContainer.innerHTML = templateHTML;
-        
-        // Extract the content from the template
-        const templateParts = tempContainer.querySelectorAll('*');
-        templateParts.forEach(part => {
-            const el = document.createElement(part.tagName);
-            
-            // Copy all attributes
-            Array.from(part.attributes).forEach(attr => {
-                el.setAttribute(attr.name, attr.value);
-            });
-            
-            furniture.appendChild(el);
-        });
-        
-        // Apply collision detection
-        if (this.checkCollision(furniture, position)) {
-            this.showNotification('Cannot place furniture here - collision detected', 'error');
-            return;
-        }
-        
-        // Position the furniture
-        furniture.setAttribute('position', {
-            x: position.x,
-            y: 0, // Place on the ground
-            z: position.z
-        });
-        
-        // Add furniture to house container
-        this.houseContainer.appendChild(furniture);
-        
-        // Show notification
-        this.showNotification(`${furnitureType} placed`, 'success');
-    }
-    
-    checkCollision(newObject, position) {
-        // Simple placeholder for collision detection
-        // In a real implementation, you would use proper physics/collision detection
-        
-        // For now, let's just check if this position overlaps with any other furniture
-        const furnitureItems = document.querySelectorAll('.furniture');
-        
-        for (let item of furnitureItems) {
-            const itemPos = item.getAttribute('position');
-            const distance = Math.sqrt(
-                Math.pow(position.x - itemPos.x, 2) + 
-                Math.pow(position.z - itemPos.z, 2)
+            // Create a bounding box for collision detection
+            const boundingBox = this.calculateBoundingBox(
+                snappedPos,
+                { x: 0, y: this.currentRotation, z: 0 },
+                objectData.boundingBox || { width: 1, height: 1, depth: 1 }
             );
             
-            // Simple distance check - consider overlapping if within 1 meter
-            if (distance < 1) {
-                return true; // Collision detected
+            // Check if placement is valid
+            this.placementValid = this.isPlacementValid(boundingBox, objectType);
+            
+            // Update overlay to indicate validity
+            const overlay = indicator.querySelector('.placement-overlay');
+            if (overlay) {
+                overlay.setAttribute('material', 
+                    this.placementValid ? 
+                    'opacity: 0.4; color: #19EFAA; wireframe: true' : 
+                    'opacity: 0.4; color: #FF7367; wireframe: true'
+                );
+            } else {
+                // Update material color to indicate validity for primitive objects
+                const material = this.placementValid ? 
+                    'opacity: 0.7; color: #19EFAA' : 
+                    'opacity: 0.7; color: #FF7367';
+                
+                indicator.querySelectorAll('[material]').forEach(el => {
+                    el.setAttribute('material', material);
+                });
+            }
+        }
+        else if (this.isDragging && this.selectedElement) {
+            // Move the selected object
+            const currentPos = this.selectedElement.getAttribute('position');
+            const deltaX = this.currentPosition.x - this.dragStartPosition.x;
+            const deltaZ = this.currentPosition.z - this.dragStartPosition.z;
+            
+            const newPos = {
+                x: currentPos.x + deltaX,
+                y: currentPos.y,
+                z: currentPos.z + deltaZ
+            };
+            
+            // Check if the new position is valid
+            const objectType = this.selectedElement.dataset.type;
+            const objectData = MODELS[objectType];
+            const rotation = this.selectedElement.getAttribute('rotation');
+            
+            // Create a bounding box for collision detection
+            const boundingBox = this.calculateBoundingBox(
+                newPos,
+                rotation,
+                objectData.boundingBox || { width: 1, height: 1, depth: 1 }
+            );
+            
+            // Only move if valid
+            if (this.isPlacementValid(boundingBox, objectType, this.selectedElement)) {
+                this.selectedElement.setAttribute('position', newPos);
+                this.updateSelectionBox();
+            }
+            
+            // Update drag start for the next move
+            this.dragStartPosition = this.currentPosition;
+        }
+    },
+    
+    handleMouseUp(event) {
+        if (this.isPlacing && event.target.closest('#ground')) {
+            // Confirm placement if clicking on the ground
+            if (this.placementValid) {
+                this.confirmPlacement();
             }
         }
         
-        return false; // No collision
-    }
+        this.isDragging = false;
+    },
     
-    showPropertiesPanel(object) {
-        // Get object type
-        const objectType = object.getAttribute('data-type') || 
-                          (object.classList.contains('wall') ? 'wall' : 
-                           object.classList.contains('door') ? 'door' :
-                           object.classList.contains('window') ? 'window' :
-                           object.classList.contains('furniture') ? 'furniture' : 'unknown');
+    // Touch event handlers (similar to mouse events but for mobile)
+    handleTouchStart(event) {
+        // Prevent default to avoid scrolling
+        event.preventDefault();
         
-        // Get properties content element
-        const propertiesContent = document.getElementById('properties-content');
+        // Convert touch to mouse event and handle
+        const touch = event.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
         
-        // Clear previous content
-        propertiesContent.innerHTML = '';
+        this.handleMouseDown({ detail: mouseEvent.detail, target: event.target });
+    },
+    
+    handleTouchMove(event) {
+        event.preventDefault();
         
-        // Build properties interface based on object type
-        switch(objectType) {
-            case 'wall':
-                this.buildWallProperties(object, propertiesContent);
-                break;
-            case 'door':
-                this.buildDoorProperties(object, propertiesContent);
-                break;
-            case 'window':
-                this.buildWindowProperties(object, propertiesContent);
-                break;
-            case 'furniture':
-                this.buildFurnitureProperties(object, propertiesContent);
-                break;
-            default:
-                propertiesContent.innerHTML = '<p>No properties available</p>';
+        const touch = event.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        
+        this.handleMouseMove({ detail: mouseEvent.detail });
+    },
+    
+    handleTouchEnd(event) {
+        event.preventDefault();
+        
+        const mouseEvent = new MouseEvent('mouseup', {});
+        this.handleMouseUp({ detail: mouseEvent.detail, target: event.target });
+    },
+    
+    confirmPlacement() {
+        if (!this.placementValid) {
+            this.showNotification('Cannot place object here - it overlaps with another object', 'error');
+            return;
         }
         
-        // Show the panel
-        this.propertiesPanel.style.display = 'block';
-    }
-    
-    buildWallProperties(wall, container) {
-        // Create dimensions group
-        const dimensionsGroup = document.createElement('div');
-        dimensionsGroup.className = 'property-group';
+        // Get the indicator and its position/rotation
+        const indicator = document.getElementById('placement-indicator');
+        const position = indicator.getAttribute('position');
+        const rotation = indicator.getAttribute('rotation');
         
-        const groupTitle = document.createElement('div');
-        groupTitle.className = 'group-title';
-        groupTitle.textContent = 'Dimensions';
-        dimensionsGroup.appendChild(groupTitle);
+        // Create the actual object
+        const objectType = this.selectedItem;
+        const objectData = MODELS[objectType];
         
-        // Get wall data
-        const length = wall.getAttribute('data-length') || 1;
-        
-        // Length property
-        const lengthRow = document.createElement('div');
-        lengthRow.className = 'property-row';
-        
-        const lengthLabel = document.createElement('label');
-        lengthLabel.textContent = 'Length (m)';
-        lengthRow.appendChild(lengthLabel);
-        
-        const lengthInput = document.createElement('input');
-        lengthInput.type = 'number';
-        lengthInput.min = '0.5';
-        lengthInput.step = '0.1';
-        lengthInput.value = length;
-        lengthInput.addEventListener('change', (e) => {
-            const newLength = parseFloat(e.target.value);
-            this.updateWallLength(wall, newLength);
-        });
-        lengthRow.appendChild(lengthInput);
-        dimensionsGroup.appendChild(lengthRow);
-        
-        // Add dimensions group to container
-        container.appendChild(dimensionsGroup);
-        
-        // Create appearance group
-        const appearanceGroup = document.createElement('div');
-        appearanceGroup.className = 'property-group';
-        
-        const appearanceTitle = document.createElement('div');
-        appearanceTitle.className = 'group-title';
-        appearanceTitle.textContent = 'Appearance';
-        appearanceGroup.appendChild(appearanceTitle);
-        
-        // Color options
-        const colorOptionsRow = document.createElement('div');
-        colorOptionsRow.className = 'property-row';
-        
-        const colorLabel = document.createElement('label');
-        colorLabel.textContent = 'Wall Color';
-        colorOptionsRow.appendChild(colorLabel);
-        
-        const colorOptions = document.createElement('div');
-        colorOptions.className = 'color-options';
-        
-        // Add color swatches
-        const colors = ['#F5F5F5', '#D3D3D3', '#A9A9A9', '#E6E6FA', '#FFE4E1'];
-        colors.forEach(color => {
-            const colorOption = document.createElement('div');
-            colorOption.className = 'color-option';
-            colorOption.style.backgroundColor = color;
-            colorOption.addEventListener('click', () => {
-                this.changeObjectColor(wall, color);
-                
-                // Update active state of color options
-                document.querySelectorAll('.color-option').forEach(opt => {
-                    opt.classList.remove('active');
-                });
-                colorOption.classList.add('active');
-            });
-            colorOptions.appendChild(colorOption);
+        const obj = this.createObject(objectType, {
+            position: position,
+            rotation: rotation,
+            scale: objectData.defaultScale || { x: 1, y: 1, z: 1 }
         });
         
-        colorOptionsRow.appendChild(colorOptions);
-        appearanceGroup.appendChild(colorOptionsRow);
+        // Add to the house container
+        document.getElementById('house-container').appendChild(obj);
         
-        // Add appearance group to container
-        container.appendChild(appearanceGroup);
-        
-        // Create actions group
-        const actionsGroup = document.createElement('div');
-        actionsGroup.className = 'property-group';
-        
-        const actionsTitle = document.createElement('div');
-        actionsTitle.className = 'group-title';
-        actionsTitle.textContent = 'Actions';
-        actionsGroup.appendChild(actionsTitle);
-        
-        // Action buttons
-        const actionsRow = document.createElement('div');
-        actionsRow.className = 'property-actions';
-        
-        const rotateBtn = document.createElement('button');
-        rotateBtn.className = 'property-btn';
-        rotateBtn.textContent = 'Rotate';
-        rotateBtn.addEventListener('click', () => {
-            this.rotateObject(wall);
-        });
-        actionsRow.appendChild(rotateBtn);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'property-btn danger';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', () => {
-            this.deleteObject(wall);
-            this.propertiesPanel.style.display = 'none';
-        });
-        actionsRow.appendChild(deleteBtn);
-        
-        actionsGroup.appendChild(actionsRow);
-        
-        // Add actions group to container
-        container.appendChild(actionsGroup);
-    }
-    
-    buildDoorProperties(door, container) {
-        // Create appearance group
-        const appearanceGroup = document.createElement('div');
-        appearanceGroup.className = 'property-group';
-        
-        const appearanceTitle = document.createElement('div');
-        appearanceTitle.className = 'group-title';
-        appearanceTitle.textContent = 'Appearance';
-        appearanceGroup.appendChild(appearanceTitle);
-        
-        // Color options
-        const colorOptionsRow = document.createElement('div');
-        colorOptionsRow.className = 'property-row';
-        
-        const colorLabel = document.createElement('label');
-        colorLabel.textContent = 'Door Color';
-        colorOptionsRow.appendChild(colorLabel);
-        
-        const colorOptions = document.createElement('div');
-        colorOptions.className = 'color-options';
-        
-        // Add color swatches for doors
-        const colors = ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#F5DEB3'];
-        colors.forEach(color => {
-            const colorOption = document.createElement('div');
-            colorOption.className = 'color-option';
-            colorOption.style.backgroundColor = color;
-            colorOption.addEventListener('click', () => {
-                this.changeObjectColor(door, color);
-                
-                // Update active state of color options
-                document.querySelectorAll('.color-option').forEach(opt => {
-                    opt.classList.remove('active');
-                });
-                colorOption.classList.add('active');
-            });
-            colorOptions.appendChild(colorOption);
+        // Add to objects array
+        this.objects.push({
+            type: objectType,
+            element: obj,
+            position: { ...position },
+            rotation: { ...rotation },
+            scale: objectData.defaultScale || { x: 1, y: 1, z: 1 }
         });
         
-        colorOptionsRow.appendChild(colorOptions);
-        appearanceGroup.appendChild(colorOptionsRow);
+        // Reset indicator
+        indicator.setAttribute('visible', false);
         
-        // Add appearance group to container
-        container.appendChild(appearanceGroup);
+        // Hide placement controls
+        document.getElementById('placement-controls').classList.remove('show');
+        document.getElementById('placement-guide').classList.remove('show');
+        document.getElementById('grid-overlay').classList.remove('show');
         
-        // Create door type row
-        const typeRow = document.createElement('div');
-        typeRow.className = 'property-row';
+        this.isPlacing = false;
+        this.gridVisible = false;
         
-        const typeLabel = document.createElement('label');
-        typeLabel.textContent = 'Door Type';
-        typeRow.appendChild(typeLabel);
+        // Deselect item
+        document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
+        this.selectedItem = null;
         
-        const typeSelect = document.createElement('select');
-        
-        const option1 = document.createElement('option');
-        option1.value = 'standard';
-        option1.textContent = 'Standard';
-        typeSelect.appendChild(option1);
-        
-        const option2 = document.createElement('option');
-        option2.value = 'sliding';
-        option2.textContent = 'Sliding';
-        typeSelect.appendChild(option2);
-        
-        const option3 = document.createElement('option');
-        option3.value = 'pocket';
-        option3.textContent = 'Pocket';
-        typeSelect.appendChild(option3);
-        
-        typeRow.appendChild(typeSelect);
-        appearanceGroup.appendChild(typeRow);
-        
-        // Create actions group
-        const actionsGroup = document.createElement('div');
-        actionsGroup.className = 'property-group';
-        
-        const actionsTitle = document.createElement('div');
-        actionsTitle.className = 'group-title';
-        actionsTitle.textContent = 'Actions';
-        actionsGroup.appendChild(actionsTitle);
-        
-        // Action buttons
-        const actionsRow = document.createElement('div');
-        actionsRow.className = 'property-actions';
-        
-        const rotateBtn = document.createElement('button');
-        rotateBtn.className = 'property-btn';
-        rotateBtn.textContent = 'Rotate';
-        rotateBtn.addEventListener('click', () => {
-            this.rotateObject(door);
-        });
-        actionsRow.appendChild(rotateBtn);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'property-btn danger';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', () => {
-            this.deleteObject(door);
-            this.propertiesPanel.style.display = 'none';
-        });
-        actionsRow.appendChild(deleteBtn);
-        
-        actionsGroup.appendChild(actionsRow);
-        
-        // Add actions group to container
-        container.appendChild(actionsGroup);
-    }
-    
-    buildWindowProperties(windowObj, container) {
-        // Create appearance group
-        const appearanceGroup = document.createElement('div');
-        appearanceGroup.className = 'property-group';
-        
-        const appearanceTitle = document.createElement('div');
-        appearanceTitle.className = 'group-title';
-        appearanceTitle.textContent = 'Appearance';
-        appearanceGroup.appendChild(appearanceTitle);
-        
-        // Window type row
-        const typeRow = document.createElement('div');
-        typeRow.className = 'property-row';
-        
-        const typeLabel = document.createElement('label');
-        typeLabel.textContent = 'Window Type';
-        typeRow.appendChild(typeLabel);
-        
-        const typeSelect = document.createElement('select');
-        
-        const option1 = document.createElement('option');
-        option1.value = 'standard';
-        option1.textContent = 'Standard';
-        typeSelect.appendChild(option1);
-        
-        const option2 = document.createElement('option');
-        option2.value = 'casement';
-        option2.textContent = 'Casement';
-        typeSelect.appendChild(option2);
-        
-        const option3 = document.createElement('option');
-        option3.value = 'bay';
-        option3.textContent = 'Bay';
-        typeSelect.appendChild(option3);
-        
-        typeRow.appendChild(typeSelect);
-        appearanceGroup.appendChild(typeRow);
-        
-        // Glass opacity row
-        const opacityRow = document.createElement('div');
-        opacityRow.className = 'property-row';
-        
-        const opacityLabel = document.createElement('label');
-        opacityLabel.textContent = 'Glass Opacity';
-        opacityRow.appendChild(opacityLabel);
-        
-        const opacityInput = document.createElement('input');
-        opacityInput.type = 'range';
-        opacityInput.min = '0';
-        opacityInput.max = '1';
-        opacityInput.step = '0.1';
-        opacityInput.value = '0.7';
-        opacityInput.addEventListener('input', (e) => {
-            const opacity = parseFloat(e.target.value);
-            this.changeWindowOpacity(windowObj, opacity);
-        });
-        opacityRow.appendChild(opacityInput);
-        appearanceGroup.appendChild(opacityRow);
-        
-        // Add appearance group to container
-        container.appendChild(appearanceGroup);
-        
-        // Create actions group
-        const actionsGroup = document.createElement('div');
-        actionsGroup.className = 'property-group';
-        
-        const actionsTitle = document.createElement('div');
-        actionsTitle.className = 'group-title';
-        actionsTitle.textContent = 'Actions';
-        actionsGroup.appendChild(actionsTitle);
-        
-        // Action buttons
-        const actionsRow = document.createElement('div');
-        actionsRow.className = 'property-actions';
-        
-        const rotateBtn = document.createElement('button');
-        rotateBtn.className = 'property-btn';
-        rotateBtn.textContent = 'Rotate';
-        rotateBtn.addEventListener('click', () => {
-            this.rotateObject(windowObj);
-        });
-        actionsRow.appendChild(rotateBtn);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'property-btn danger';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', () => {
-            this.deleteObject(windowObj);
-            this.propertiesPanel.style.display = 'none';
-        });
-        actionsRow.appendChild(deleteBtn);
-        
-        actionsGroup.appendChild(actionsRow);
-        
-        // Add actions group to container
-        container.appendChild(actionsGroup);
-    }
-    
-    buildFurnitureProperties(furniture, container) {
-        // Get furniture type
-        const furnitureType = furniture.getAttribute('data-furniture-type') || 'unknown';
-        
-        // Create dimensions group
-        const dimensionsGroup = document.createElement('div');
-        dimensionsGroup.className = 'property-group';
-        
-        const groupTitle = document.createElement('div');
-        groupTitle.className = 'group-title';
-        groupTitle.textContent = 'Dimensions';
-        dimensionsGroup.appendChild(groupTitle);
-        
-        // Scale property
-        const scaleRow = document.createElement('div');
-        scaleRow.className = 'property-row';
-        
-        const scaleLabel = document.createElement('label');
-        scaleLabel.textContent = 'Size Scale';
-        scaleRow.appendChild(scaleLabel);
-        
-        const scaleInput = document.createElement('input');
-        scaleInput.type = 'range';
-        scaleInput.min = '0.5';
-        scaleInput.max = '1.5';
-        scaleInput.step = '0.1';
-        scaleInput.value = '1.0';
-        scaleInput.addEventListener('input', (e) => {
-            const scale = parseFloat(e.target.value);
-            this.scaleFurniture(furniture, scale);
-        });
-        scaleRow.appendChild(scaleInput);
-        dimensionsGroup.appendChild(scaleRow);
-        
-        // Add dimensions group to container
-        container.appendChild(dimensionsGroup);
-        
-        // Create appearance group
-        const appearanceGroup = document.createElement('div');
-        appearanceGroup.className = 'property-group';
-        
-        const appearanceTitle = document.createElement('div');
-        appearanceTitle.className = 'group-title';
-        appearanceTitle.textContent = 'Appearance';
-        appearanceGroup.appendChild(appearanceTitle);
-        
-        // Color options
-        const colorOptionsRow = document.createElement('div');
-        colorOptionsRow.className = 'property-row';
-        
-        const colorLabel = document.createElement('label');
-        colorLabel.textContent = 'Furniture Color';
-        colorOptionsRow.appendChild(colorLabel);
-        
-        const colorOptions = document.createElement('div');
-        colorOptions.className = 'color-options';
-        
-        // Add color swatches for furniture
-        let colors;
-        if (furnitureType === 'sofa' || furnitureType === 'chair') {
-            colors = ['#6082B6', '#4682B4', '#5F9EA0', '#556B2F', '#8B4513'];
-        } else {
-            colors = ['#8B4513', '#A0522D', '#D2691E', '#DEB887', '#F5DEB3'];
-        }
-        
-        colors.forEach(color => {
-            const colorOption = document.createElement('div');
-            colorOption.className = 'color-option';
-            colorOption.style.backgroundColor = color;
-            colorOption.addEventListener('click', () => {
-                this.changeObjectColor(furniture, color);
-                
-                // Update active state of color options
-                document.querySelectorAll('.color-option').forEach(opt => {
-                    opt.classList.remove('active');
-                });
-                colorOption.classList.add('active');
-            });
-            colorOptions.appendChild(colorOption);
-        });
-        
-        colorOptionsRow.appendChild(colorOptions);
-        appearanceGroup.appendChild(colorOptionsRow);
-        
-        // Add appearance group to container
-        container.appendChild(appearanceGroup);
-        
-        // Create actions group
-        const actionsGroup = document.createElement('div');
-        actionsGroup.className = 'property-group';
-        
-        const actionsTitle = document.createElement('div');
-        actionsTitle.className = 'group-title';
-        actionsTitle.textContent = 'Actions';
-        actionsGroup.appendChild(actionsTitle);
-        
-        // Action buttons
-        const actionsRow = document.createElement('div');
-        actionsRow.className = 'property-actions';
-        
-        const rotateBtn = document.createElement('button');
-        rotateBtn.className = 'property-btn';
-        rotateBtn.textContent = 'Rotate';
-        rotateBtn.addEventListener('click', () => {
-            this.rotateObject(furniture);
-        });
-        actionsRow.appendChild(rotateBtn);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'property-btn danger';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', () => {
-            this.deleteObject(furniture);
-            this.propertiesPanel.style.display = 'none';
-        });
-        actionsRow.appendChild(deleteBtn);
-        
-        actionsGroup.appendChild(actionsRow);
-        
-        // Add actions group to container
-        container.appendChild(actionsGroup);
-    }
-    
-    updateWallLength(wall, newLength) {
-        // Get wall entity's box element
-        const box = wall.querySelector('a-box');
-        if (!box) return;
-        
-        // Update box width (which corresponds to wall length)
-        box.setAttribute('width', newLength);
-        
-        // Update wall's data attribute
-        wall.setAttribute('data-length', newLength);
+        // Add to undo stack
+        this.addToUndoStack();
         
         // Show notification
-        this.showNotification('Wall length updated', 'success');
-    }
+        this.showNotification(`${objectData.displayName || objectType} placed successfully!`, 'success');
+    },
     
-    changeObjectColor(object, color) {
-        if (object.hasAttribute('material')) {
-            // Update object's material color
-            object.setAttribute('material', 'color', color);
-        } else {
-            // For composite objects, update all child meshes
-            const meshes = object.querySelectorAll('[material]');
-            
-            // If it's a door or window, only color specific parts
-            if (object.classList.contains('door')) {
-                const doorPanel = object.querySelector('.door-panel');
-                if (doorPanel) {
-                    doorPanel.setAttribute('material', 'color', color);
-                }
-            } else if (object.classList.contains('window')) {
-                const windowFrame = object.querySelector('.window-frame');
-                if (windowFrame) {
-                    windowFrame.setAttribute('material', 'color', color);
-                }
-            } else {
-                // Otherwise color all meshes
-                meshes.forEach(mesh => {
-                    mesh.setAttribute('material', 'color', color);
-                });
-            }
+    cancelPlacement() {
+        // Hide placement indicator
+        const indicator = document.getElementById('placement-indicator');
+        indicator.setAttribute('visible', false);
+        
+        // Hide placement controls
+        document.getElementById('placement-controls').classList.remove('show');
+        document.getElementById('placement-guide').classList.remove('show');
+        document.getElementById('grid-overlay').classList.remove('show');
+        
+        this.isPlacing = false;
+        this.gridVisible = false;
+        
+        // Deselect item
+        document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
+        this.selectedItem = null;
+    },
+    
+    rotateObject() {
+        if (this.isPlacing) {
+            // Rotate in 45-degree increments
+            this.currentRotation = (this.currentRotation + 45) % 360;
+            document.getElementById('placement-indicator').setAttribute('rotation', { x: 0, y: this.currentRotation, z: 0 });
+        }
+    },
+    
+    snapToGrid(position) {
+        return {
+            x: Math.round(position.x / this.gridSize) * this.gridSize,
+            y: this.defaultHeight, // Keep at default height
+            z: Math.round(position.z / this.gridSize) * this.gridSize
+        };
+    },
+    
+    selectObject(element) {
+        // Deselect any previously selected object
+        this.deselectObject();
+        
+        // Select the new object
+        this.selectedElement = element;
+        
+        // Highlight the selected object
+        this.updateSelectionBox();
+    },
+    
+    updateSelectionBox() {
+        if (!this.selectedElement) {
+            this.selectionBox.setAttribute('visible', false);
+            return;
         }
         
-        this.showNotification('Color updated', 'success');
-    }
+        // Get object properties
+        const position = this.selectedElement.getAttribute('position');
+        const rotation = this.selectedElement.getAttribute('rotation');
+        const objectType = this.selectedElement.dataset.type;
+        const objectData = MODELS[objectType];
+        
+        // Create bounding box for the selection box
+        const boundingBox = objectData.boundingBox || { width: 1, height: 1, depth: 1 };
+        
+        // Update selection box
+        this.selectionBox.setAttribute('position', position);
+        this.selectionBox.setAttribute('rotation', rotation);
+        
+        // Create or update the box
+        this.selectionBox.innerHTML = '';
+        
+        // Create wireframe box
+        const box = document.createElement('a-entity');
+        box.setAttribute('geometry', `primitive: box; width: ${boundingBox.width + 0.05}; height: ${boundingBox.height + 0.05}; depth: ${boundingBox.depth + 0.05}`);
+        box.setAttribute('material', 'color: #5B8BFF; opacity: 0.2; wireframe: true');
+        
+        this.selectionBox.appendChild(box);
+        this.selectionBox.setAttribute('visible', true);
+    },
     
-    changeWindowOpacity(windowObj, opacity) {
-        const glass = windowObj.querySelector('.window-glass');
-        if (glass) {
-            glass.setAttribute('material', 'opacity', opacity);
+    deselectObject() {
+        this.selectedElement = null;
+        this.selectionBox.setAttribute('visible', false);
+        document.getElementById('object-menu').style.display = 'none';
+        document.getElementById('properties-panel').style.display = 'none';
+    },
+    
+    showObjectMenu(event) {
+        // Position the menu at the mouse position
+        const menu = document.getElementById('object-menu');
+        menu.style.left = `${event.clientX}px`;
+        menu.style.top = `${event.clientY}px`;
+        menu.style.display = 'flex';
+    },
+    
+    editSelectedObject() {
+        if (this.selectedElement) {
+            this.showPropertiesPanel();
         }
-    }
+    },
     
-    scaleFurniture(furniture, scale) {
-        furniture.setAttribute('scale', `${scale} ${scale} ${scale}`);
-    }
+    rotateSelectedObject() {
+        if (this.selectedElement) {
+            const currentRotation = this.selectedElement.getAttribute('rotation');
+            const newRotation = {
+                x: currentRotation.x,
+                y: (currentRotation.y + 45) % 360,
+                z: currentRotation.z
+            };
+            
+            this.selectedElement.setAttribute('rotation', newRotation);
+            this.updateSelectionBox();
+            
+            // Add to undo stack
+            this.addToUndoStack();
+        }
+    },
     
-    filterCatalogItems(tabType) {
-        // Simple implementation that could be expanded later
-        // For now, we're just showing a notification
-    }
+    duplicateSelectedObject() {
+        if (this.selectedElement) {
+            const objectType = this.selectedElement.dataset.type;
+            const position = this.selectedElement.getAttribute('position');
+            const rotation = this.selectedElement.getAttribute('rotation');
+            const scale = this.selectedElement.getAttribute('scale');
+            
+            // Create a new object at a slightly offset position
+            const newPosition = {
+                x: position.x + this.gridSize,
+                y: position.y,
+                z: position.z + this.gridSize
+            };
+            
+            const obj = this.createObject(objectType, {
+                position: newPosition,
+                rotation: rotation,
+                scale: scale
+            });
+            
+            // Check if the placement is valid
+            const objectData = MODELS[objectType];
+            const boundingBox = this.calculateBoundingBox(
+                newPosition,
+                rotation,
+                objectData.boundingBox || { width: 1, height: 1, depth: 1 }
+            );
+            
+            if (!this.isPlacementValid(boundingBox, objectType)) {
+                this.showNotification('Cannot duplicate object - not enough space', 'error');
+                return;
+            }
+            
+            // Add to the house container
+            document.getElementById('house-container').appendChild(obj);
+            
+            // Add to objects array
+            this.objects.push({
+                type: objectType,
+                element: obj,
+                position: { ...newPosition },
+                rotation: { ...rotation },
+                scale: { ...scale }
+            });
+            
+            // Select the new object
+            this.selectObject(obj);
+            
+            // Add to undo stack
+            this.addToUndoStack();
+            
+            // Show notification
+            this.showNotification('Object duplicated', 'success');
+        }
+    },
+    
+    deleteSelectedObject() {
+        if (this.selectedElement) {
+            this.deleteObject(this.selectedElement);
+        }
+    },
+    
+    deleteObject(element) {
+        // Find the object in the array
+        const index = this.objects.findIndex(obj => obj.element === element);
+        
+        if (index !== -1) {
+            // Remove from the array
+            this.objects.splice(index, 1);
+            
+            // Remove from the DOM
+            element.parentNode.removeChild(element);
+            
+            // Deselect
+            this.deselectObject();
+            
+            // Add to undo stack
+            this.addToUndoStack();
+            
+            // Show notification
+            this.showNotification('Object deleted', 'info');
+        }
+    },
+    
+    showPropertiesPanel() {
+        if (!this.selectedElement) return;
+        
+        const panel = document.getElementById('properties-panel');
+        const content = document.getElementById('properties-content');
+        
+        // Clear previous content
+        content.innerHTML = '';
+        
+        // Get object data
+        const objectType = this.selectedElement.dataset.type;
+        const objectData = MODELS[objectType];
+        const position = this.selectedElement.getAttribute('position');
+        const rotation = this.selectedElement.getAttribute('rotation');
+        const scale = this.selectedElement.getAttribute('scale');
+        
+        // Create the properties form
+        const form = document.createElement('form');
+        form.addEventListener('submit', (e) => e.preventDefault());
+        
+        // Basic information group
+        const basicGroup = document.createElement('div');
+        basicGroup.className = 'property-group';
+        basicGroup.innerHTML = `
+            <div class="group-title">Basic Information</div>
+            <div class="property-row">
+                <label>Type</label>
+                <input type="text" value="${objectData.displayName || objectType}" readonly>
+            </div>
+        `;
+        form.appendChild(basicGroup);
+        
+        // Position group
+        const positionGroup = document.createElement('div');
+        positionGroup.className = 'property-group';
+        positionGroup.innerHTML = `
+            <div class="group-title">Position</div>
+            <div class="property-row">
+                <label>X Position</label>
+                <input type="number" id="pos-x" value="${position.x.toFixed(2)}" step="0.5">
+            </div>
+            <div class="property-row">
+                <label>Z Position</label>
+                <input type="number" id="pos-z" value="${position.z.toFixed(2)}" step="0.5">
+            </div>
+        `;
+        form.appendChild(positionGroup);
+        
+        // Rotation group
+        const rotationGroup = document.createElement('div');
+        rotationGroup.className = 'property-group';
+        rotationGroup.innerHTML = `
+            <div class="group-title">Rotation</div>
+            <div class="property-row">
+                <label>Y Rotation (degrees)</label>
+                <div class="slider-control">
+                    <div class="slider-row">
+                        <input type="range" id="rot-y" min="0" max="359" value="${rotation.y}" step="5">
+                        <div class="slider-value">${rotation.y}°</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        form.appendChild(rotationGroup);
+        
+        // Scale group
+        const scaleGroup = document.createElement('div');
+        scaleGroup.className = 'property-group';
+        scaleGroup.innerHTML = `
+            <div class="group-title">Scale</div>
+            <div class="property-row">
+                <label>Width</label>
+                <div class="slider-control">
+                    <div class="slider-row">
+                        <input type="range" id="scale-x" min="0.5" max="3" value="${scale.x}" step="0.1">
+                        <div class="slider-value">${scale.x.toFixed(1)}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="property-row">
+                <label>Height</label>
+                <div class="slider-control">
+                    <div class="slider-row">
+                        <input type="range" id="scale-y" min="0.5" max="3" value="${scale.y}" step="0.1">
+                        <div class="slider-value">${scale.y.toFixed(1)}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="property-row">
+                <label>Depth</label>
+                <div class="slider-control">
+                    <div class="slider-row">
+                        <input type="range" id="scale-z" min="0.5" max="3" value="${scale.z}" step="0.1">
+                        <div class="slider-value">${scale.z.toFixed(1)}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        form.appendChild(scaleGroup);
+        
+        // Material/color group if the object supports it
+        if (objectData.materials && objectData.materials.length > 0) {
+            const materialGroup = document.createElement('div');
+            materialGroup.className = 'property-group';
+            materialGroup.innerHTML = `
+                <div class="group-title">Material</div>
+                <div class="property-row">
+                    <label>Color</label>
+                    <div class="color-options">
+                        ${objectData.materials.map(color => 
+                            `<div class="color-option" style="background-color: ${color};" data-color="${color}"></div>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+            form.appendChild(materialGroup);
+            
+            // Add event listeners to color options
+            setTimeout(() => {
+                document.querySelectorAll('.color-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+                        option.classList.add('active');
+                        
+                        const color = option.dataset.color;
+                        this.changeObjectColor(color);
+                    });
+                });
+            }, 0);
+        }
+        
+        // Actions group
+        const actionsGroup = document.createElement('div');
+        actionsGroup.className = 'property-group';
+        actionsGroup.innerHTML = `
+            <div class="group-title">Actions</div>
+            <div class="property-actions">
+                <div class="property-btn btn-secondary" id="prop-duplicate">Duplicate</div>
+                <div class="property-btn danger" id="prop-delete">Delete</div>
+            </div>
+        `;
+        form.appendChild(actionsGroup);
+        
+        // Add the form to the content
+        content.appendChild(form);
+        
+        // Add event listeners to form controls
+        setTimeout(() => {
+            // Position inputs
+            document.getElementById('pos-x').addEventListener('change', (e) => {
+                const newPos = { ...position, x: parseFloat(e.target.value) };
+                this.updateObjectPosition(newPos);
+            });
+            
+            document.getElementById('pos-z').addEventListener('change', (e) => {
+                const newPos = { ...position, z: parseFloat(e.target.value) };
+                this.updateObjectPosition(newPos);
+            });
+            
+            // Rotation slider
+            const rotSlider = document.getElementById('rot-y');
+            const rotValue = rotSlider.nextElementSibling;
+            rotSlider.addEventListener('input', (e) => {
+                rotValue.textContent = `${e.target.value}°`;
+            });
+            
+            rotSlider.addEventListener('change', (e) => {
+                const newRot = { ...rotation, y: parseInt(e.target.value) };
+                this.updateObjectRotation(newRot);
+            });
+            
+            // Scale sliders
+            ['x', 'y', 'z'].forEach(axis => {
+                const scaleSlider = document.getElementById(`scale-${axis}`);
+                const scaleValue = scaleSlider.nextElementSibling;
+                
+                scaleSlider.addEventListener('input', (e) => {
+                    scaleValue.textContent = parseFloat(e.target.value).toFixed(1);
+                });
+                
+                scaleSlider.addEventListener('change', (e) => {
+                    const newScale = { ...scale };
+                    newScale[axis] = parseFloat(e.target.value);
+                    this.updateObjectScale(newScale);
+                });
+            });
+            
+            // Action buttons
+            document.getElementById('prop-duplicate').addEventListener('click', () => this.duplicateSelectedObject());
+            document.getElementById('prop-delete').addEventListener('click', () => this.deleteSelectedObject());
+        }, 0);
+        
+        // Show the panel
+        panel.style.display = 'block';
+    },
+    
+    updateObjectPosition(newPos) {
+        if (!this.selectedElement) return;
+        
+        // Check if the new position is valid
+        const objectType = this.selectedElement.dataset.type;
+        const objectData = MODELS[objectType];
+        const rotation = this.selectedElement.getAttribute('rotation');
+        
+        // Create a bounding box for collision detection
+        const boundingBox = this.calculateBoundingBox(
+            newPos,
+            rotation,
+            objectData.boundingBox || { width: 1, height: 1, depth: 1 }
+        );
+        
+        // Only move if valid
+        if (this.isPlacementValid(boundingBox, objectType, this.selectedElement)) {
+            this.selectedElement.setAttribute('position', newPos);
+            this.updateSelectionBox();
+            
+            // Update object in objects array
+            const index = this.objects.findIndex(obj => obj.element === this.selectedElement);
+            if (index !== -1) {
+                this.objects[index].position = { ...newPos };
+            }
+            
+            // Add to undo stack
+            this.addToUndoStack();
+        } else {
+            // Revert the input values
+            const currentPos = this.selectedElement.getAttribute('position');
+            document.getElementById('pos-x').value = currentPos.x.toFixed(2);
+            document.getElementById('pos-z').value = currentPos.z.toFixed(2);
+            
+            this.showNotification('Cannot move object to this position - it overlaps with another object', 'error');
+        }
+    },
+    
+    updateObjectRotation(newRot) {
+        if (!this.selectedElement) return;
+        
+        this.selectedElement.setAttribute('rotation', newRot);
+        this.updateSelectionBox();
+        
+        // Update object in objects array
+        const index = this.objects.findIndex(obj => obj.element === this.selectedElement);
+        if (index !== -1) {
+            this.objects[index].rotation = { ...newRot };
+        }
+        
+        // Add to undo stack
+        this.addToUndoStack();
+    },
+    
+    updateObjectScale(newScale) {
+        if (!this.selectedElement) return;
+        
+        // Check if the new scale is valid (no collisions)
+        const objectType = this.selectedElement.dataset.type;
+        const position = this.selectedElement.getAttribute('position');
+        const rotation = this.selectedElement.getAttribute('rotation');
+        
+        // Create a bounding box for collision detection
+        const boundingBox = {
+            width: MODELS[objectType].boundingBox.width * newScale.x,
+            height: MODELS[objectType].boundingBox.height * newScale.y,
+            depth: MODELS[objectType].boundingBox.depth * newScale.z
+        };
+        
+        const box = this.calculateBoundingBox(
+            position,
+            rotation,
+            boundingBox
+        );
+        
+        // Only scale if valid
+        if (this.isPlacementValid(box, objectType, this.selectedElement)) {
+            this.selectedElement.setAttribute('scale', newScale);
+            this.updateSelectionBox();
+            
+            // Update object in objects array
+            const index = this.objects.findIndex(obj => obj.element === this.selectedElement);
+            if (index !== -1) {
+                this.objects[index].scale = { ...newScale };
+            }
+            
+            // Add to undo stack
+            this.addToUndoStack();
+        } else {
+            // Revert the slider values
+            const currentScale = this.selectedElement.getAttribute('scale');
+            ['x', 'y', 'z'].forEach(axis => {
+                const slider = document.getElementById(`scale-${axis}`);
+                slider.value = currentScale[axis];
+                slider.nextElementSibling.textContent = currentScale[axis].toFixed(1);
+            });
+            
+            this.showNotification('Cannot resize object - it would overlap with another object', 'error');
+        }
+    },
+    
+    changeObjectColor(color) {
+        if (!this.selectedElement) return;
+        
+        const objectType = this.selectedElement.dataset.type;
+        const objectData = MODELS[objectType];
+        
+        if (objectData.materialComponent) {
+            // For GLTF models, we need to set the material property on the specific component
+            // This requires the model to have named materials
+            this.selectedElement.setAttribute(`material__${objectData.materialComponent}`, `color: ${color}`);
+            
+            // Store the current color
+            this.selectedElement.setAttribute('data-color', color);
+        } else {
+            // For primitive-based objects
+            this.selectedElement.querySelectorAll('[material]').forEach(el => {
+                const material = el.getAttribute('material');
+                el.setAttribute('material', `${material}; color: ${color}`);
+            });
+        }
+        
+        // Add to undo stack
+        this.addToUndoStack();
+    },
+    
+    calculateBoundingBox(position, rotation, dimensions) {
+        // Create the 8 corners of the bounding box
+        const halfWidth = dimensions.width / 2;
+        const halfHeight = dimensions.height / 2;
+        const halfDepth = dimensions.depth / 2;
+        
+        // Simple bounding box for now - doesn't account for rotation
+        return {
+            min: { 
+                x: position.x - halfWidth,
+                y: position.y - halfHeight,
+                z: position.z - halfDepth
+            },
+            max: {
+                x: position.x + halfWidth,
+                y: position.y + halfHeight,
+                z: position.z + halfDepth
+            }
+        };
+    },
+    
+    isPlacementValid(boundingBox, objectType, excludeElement = null) {
+        // Check for collisions with other objects
+        return CollisionManager.checkPlacement(boundingBox, objectType, excludeElement, this.objects);
+    },
     
     saveDesign() {
-        // Create a representation of the current design
-        const design = {
-            walls: this.wallSegments.map(wall => ({
-                start: wall.start,
-                end: wall.end,
-                length: wall.length,
-                angle: wall.angle
-            })),
-            doors: Array.from(document.querySelectorAll('.door')).map(door => {
+        // Convert objects to a saveable format
+        const saveData = {
+            version: '1.0',
+            objects: this.objects.map(obj => {
                 return {
-                    position: door.getAttribute('position'),
-                    rotation: door.getAttribute('rotation'),
-                    type: door.getAttribute('data-door-type') || 'standard'
+                    type: obj.type,
+                    position: obj.position,
+                    rotation: obj.rotation,
+                    scale: obj.scale,
+                    // Add any other properties like color, etc.
+                    color: obj.element.getAttribute('data-color') || '#FFFFFF'
                 };
-            }),
-            windows: Array.from(document.querySelectorAll('.window')).map(window => {
+            })
+        };
+        
+        // Save to localStorage
+        localStorage.setItem('easyfloor_design', JSON.stringify(saveData));
+        
+        // Record save time
+        this.lastSaved = new Date();
+        
+        // Show notification
+        this.showNotification('Design saved successfully!', 'success');
+    },
+    
+    loadDesign() {
+        // Try to load from localStorage
+        const saveData = localStorage.getItem('easyfloor_design');
+        
+        if (!saveData) {
+            this.showNotification('No saved design found', 'info');
+            return;
+        }
+        
+        try {
+            const data = JSON.parse(saveData);
+            
+            // Clear current objects
+            this.objects.forEach(obj => {
+                if (obj.element.parentNode) {
+                    obj.element.parentNode.removeChild(obj.element);
+                }
+            });
+            
+            this.objects = [];
+            
+            // Load saved objects
+            const container = document.getElementById('house-container');
+            
+            data.objects.forEach(objData => {
+                const obj = this.createObject(objData.type, {
+                    position: objData.position,
+                    rotation: objData.rotation,
+                    scale: objData.scale
+                });
+                
+                container.appendChild(obj);
+                
+                // Add to objects array
+                this.objects.push({
+                    type: objData.type,
+                    element: obj,
+                    position: { ...objData.position },
+                    rotation: { ...objData.rotation },
+                    scale: { ...objData.scale }
+                });
+                
+                // Set color if available
+                if (objData.color) {
+                    const objectData = MODELS[objData.type];
+                    if (objectData.materialComponent) {
+                        obj.setAttribute(`material__${objectData.materialComponent}`, `color: ${objData.color}`);
+                        obj.setAttribute('data-color', objData.color);
+                    } else {
+                        obj.querySelectorAll('[material]').forEach(el => {
+                            const material = el.getAttribute('material');
+                            el.setAttribute('material', `${material}; color: ${objData.color}`);
+                        });
+                    }
+                }
+            });
+            
+            // Show notification
+            this.showNotification('Design loaded successfully!', 'success');
+            
+        } catch (e) {
+            console.error('Error loading design:', e);
+            this.showNotification('Error loading design', 'error');
+        }
+    },
+    
+    loadSavedDesign() {
+        // Check if there's a saved design on initialization
+        const saveData = localStorage.getItem('easyfloor_design');
+        
+        if (saveData) {
+            try {
+                const data = JSON.parse(saveData);
+                
+                // Load saved objects
+                const container = document.getElementById('house-container');
+                
+                data.objects.forEach(objData => {
+                    const obj = this.createObject(objData.type, {
+                        position: objData.position,
+                        rotation: objData.rotation,
+                        scale: objData.scale
+                    });
+                    
+                    container.appendChild(obj);
+                    
+                    // Add to objects array
+                    this.objects.push({
+                        type: objData.type,
+                        element: obj,
+                        position: { ...objData.position },
+                        rotation: { ...objData.rotation },
+                        scale: { ...objData.scale }
+                    });
+                    
+                    // Set color if available
+                    if (objData.color) {
+                        const objectData = MODELS[objData.type];
+                        if (objectData.materialComponent) {
+                            obj.setAttribute(`material__${objectData.materialComponent}`, `color: ${objData.color}`);
+                            obj.setAttribute('data-color', objData.color);
+                        } else {
+                            obj.querySelectorAll('[material]').forEach(el => {
+                                const material = el.getAttribute('material');
+                                el.setAttribute('material', `${material}; color: ${objData.color}`);
+                            });
+                        }
+                    }
+                });
+                
+            } catch (e) {
+                console.error('Error loading saved design:', e);
+            }
+        }
+    },
+    
+    exportDesign() {
+        // Convert objects to a saveable format
+        const exportData = {
+            version: '1.0',
+            timestamp: new Date().toISOString(),
+            objects: this.objects.map(obj => {
                 return {
-                    position: window.getAttribute('position'),
-                    rotation: window.getAttribute('rotation'),
-                    type: window.getAttribute('data-window-type') || 'standard'
-                };
-            }),
-            furniture: Array.from(document.querySelectorAll('.furniture')).map(furniture => {
-                return {
-                    type: furniture.getAttribute('data-furniture-type'),
-                    position: furniture.getAttribute('position'),
-                    rotation: furniture.getAttribute('rotation'),
-                    scale: furniture.getAttribute('scale') || { x: 1, y: 1, z: 1 }
+                    type: obj.type,
+                    position: obj.position,
+                    rotation: obj.rotation,
+                    scale: obj.scale,
+                    // Add any other properties like color, etc.
+                    color: obj.element.getAttribute('data-color') || '#FFFFFF'
                 };
             })
         };
         
         // Convert to JSON string
-        const designJSON = JSON.stringify(design);
+        const jsonString = JSON.stringify(exportData, null, 2);
         
-        // Save to local storage
-        localStorage.setItem('houseDesign', designJSON);
+        // Create a download link
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "easyfloor_design.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
         
-        // In a real app, you could also offer to save to a file
-        // or to a server (which would require backend implementation)
-        
-        this.showNotification('Design saved successfully!', 'success');
-    }
+        // Show notification
+        this.showNotification('Design exported successfully!', 'success');
+    },
     
-    loadDesign() {
-        // Load from local storage
-        const designJSON = localStorage.getItem('houseDesign');
+    addToUndoStack() {
+        // Create a snapshot of the current state
+        const snapshot = {
+            objects: this.objects.map(obj => {
+                return {
+                    type: obj.type,
+                    element: obj.element,
+                    position: { ...obj.position },
+                    rotation: { ...obj.rotation },
+                    scale: { ...obj.scale }
+                };
+            })
+        };
         
-        if (!designJSON) {
-            this.showNotification('No saved design found', 'error');
-            return;
+        // Add to undo stack
+        this.undoStack.push(snapshot);
+        
+        // Clear redo stack
+        this.redoStack = [];
+        
+        // Limit undo stack size
+        if (this.undoStack.length > 20) {
+            this.undoStack.shift();
         }
+    },
+    
+    undo() {
+        if (this.undoStack.length === 0) return;
         
-        try {
-            // Parse the design data
-            const design = JSON.parse(designJSON);
-            
-            // Clear current design
-            this.clearDesign();
-            
-            // Load walls
-            if (design.walls && design.walls.length > 0) {
-                design.walls.forEach(wall => {
-                    // Convert saved coordinates to Vector3
-                    const start = { x: wall.start.x, y: 0, z: wall.start.z };
-                    const end = { x: wall.end.x, y: 0, z: wall.end.z };
-                    this.createWall(start, end);
-                });
+        // Store current state in redo stack
+        const currentState = {
+            objects: this.objects.map(obj => {
+                return {
+                    type: obj.type,
+                    element: obj.element,
+                    position: { ...obj.position },
+                    rotation: { ...obj.rotation },
+                    scale: { ...obj.scale }
+                };
+            })
+        };
+        
+        this.redoStack.push(currentState);
+        
+        // Get previous state
+        const previousState = this.undoStack.pop();
+        
+        // Apply the previous state
+        this.applyState(previousState);
+        
+        // Show notification
+        this.showNotification('Undo successful', 'info');
+    },
+    
+    redo() {
+        if (this.redoStack.length === 0) return;
+        
+        // Store current state in undo stack
+        const currentState = {
+            objects: this.objects.map(obj => {
+                return {
+                    type: obj.type,
+                    element: obj.element,
+                    position: { ...obj.position },
+                    rotation: { ...obj.rotation },
+                    scale: { ...obj.scale }
+                };
+            })
+        };
+        
+        this.undoStack.push(currentState);
+        
+        // Get next state
+        const nextState = this.redoStack.pop();
+        
+        // Apply the next state
+        this.applyState(nextState);
+        
+        // Show notification
+        this.showNotification('Redo successful', 'info');
+    },
+    
+    applyState(state) {
+        // Clear current objects
+        this.objects.forEach(obj => {
+            if (obj.element.parentNode) {
+                obj.element.parentNode.removeChild(obj.element);
             }
-            
-            // Load doors
-            if (design.doors && design.doors.length > 0) {
-                design.doors.forEach(door => {
-                    // Create door entity directly
-                    const doorEntity = document.createElement('a-entity');
-                    doorEntity.classList.add('interactive', 'door');
-                    doorEntity.setAttribute('data-type', 'door');
-                    doorEntity.setAttribute('data-door-type', door.type || 'standard');
-                    
-                    // Get the template content
-                    const template = document.getElementById('door-template');
-                    const templateHTML = template.innerHTML;
-                    
-                    // Parse the template HTML and create elements from it
-                    const tempContainer = document.createElement('div');
-                    tempContainer.innerHTML = templateHTML;
-                    
-                    // Extract the content from the template
-                    const templateParts = tempContainer.querySelectorAll('*');
-                    templateParts.forEach(part => {
-                        const el = document.createElement(part.tagName);
-                        
-                        // Copy all attributes
-                        Array.from(part.attributes).forEach(attr => {
-                            el.setAttribute(attr.name, attr.value);
-                        });
-                        
-                        doorEntity.appendChild(el);
-                    });
-                    
-                    // Set position and rotation
-                    doorEntity.setAttribute('position', door.position);
-                    doorEntity.setAttribute('rotation', door.rotation);
-                    
-                    // Add to house container
-                    this.houseContainer.appendChild(doorEntity);
-                });
-            }
-            
-            // Load windows (similar to doors)
-            if (design.windows && design.windows.length > 0) {
-                design.windows.forEach(window => {
-                    // Create window entity directly
-                    const windowEntity = document.createElement('a-entity');
-                    windowEntity.classList.add('interactive', 'window');
-                    windowEntity.setAttribute('data-type', 'window');
-                    windowEntity.setAttribute('data-window-type', window.type || 'standard');
-                    
-                    // Get the template content
-                    const template = document.getElementById('window-template');
-                    const templateHTML = template.innerHTML;
-                    
-                    // Parse the template HTML and create elements from it
-                    const tempContainer = document.createElement('div');
-                    tempContainer.innerHTML = templateHTML;
-                    
-                    // Extract the content from the template
-                    const templateParts = tempContainer.querySelectorAll('*');
-                    templateParts.forEach(part => {
-                        const el = document.createElement(part.tagName);
-                        
-                        // Copy all attributes
-                        Array.from(part.attributes).forEach(attr => {
-                            el.setAttribute(attr.name, attr.value);
-                        });
-                        
-                        windowEntity.appendChild(el);
-                    });
-                    
-                    // Set position and rotation
-                    windowEntity.setAttribute('position', window.position);
-                    windowEntity.setAttribute('rotation', window.rotation);
-                    
-                    // Add to house container
-                    this.houseContainer.appendChild(windowEntity);
-                });
-            }
-            
-            // Load furniture
-            if (design.furniture && design.furniture.length > 0) {
-                design.furniture.forEach(item => {
-                    // Create furniture entity
-                    const furnitureEntity = document.createElement('a-entity');
-                    furnitureEntity.classList.add('interactive', 'furniture', item.type);
-                    furnitureEntity.setAttribute('data-type', 'furniture');
-                    furnitureEntity.setAttribute('data-furniture-type', item.type);
-                    
-                    // Get the template content
-                    const template = document.getElementById(`${item.type}-template`);
-                    if (!template) {
-                        console.warn(`No template found for furniture type: ${item.type}`);
-                        return;
-                    }
-                    
-                    const templateHTML = template.innerHTML;
-                    
-                    // Parse the template HTML and create elements from it
-                    const tempContainer = document.createElement('div');
-                    tempContainer.innerHTML = templateHTML;
-                    
-                    // Extract the content from the template
-                    const templateParts = tempContainer.querySelectorAll('*');
-                    templateParts.forEach(part => {
-                        const el = document.createElement(part.tagName);
-                        
-                        // Copy all attributes
-                        Array.from(part.attributes).forEach(attr => {
-                            el.setAttribute(attr.name, attr.value);
-                        });
-                        
-                        furnitureEntity.appendChild(el);
-                    });
-                    
-                    // Set position, rotation, and scale
-                    furnitureEntity.setAttribute('position', item.position);
-                    furnitureEntity.setAttribute('rotation', item.rotation);
-                    if (item.scale) {
-                        furnitureEntity.setAttribute('scale', item.scale);
-                    }
-                    
-                    // Add to house container
-                    this.houseContainer.appendChild(furnitureEntity);
-                });
-            }
-            
-            this.showNotification('Design loaded successfully!', 'success');
-        } catch (e) {
-            console.error('Error loading design:', e);
-            this.showNotification('Error loading design', 'error');
-        }
-    }
-    
-    clearDesign() {
-        // Remove all walls, doors, windows, and furniture
-        this.houseContainer.innerHTML = '';
+        });
         
-        // Clear wall segments array
-        this.wallSegments = [];
-        this.roomSegments = [];
+        // Apply the new state
+        this.objects = state.objects;
         
-        // Reset any other state
-        if (this.selectedObject) {
-            this.selectedObject = null;
-            this.hideObjectActions();
-        }
-    }
-    
-    exportDesign() {
-        // In a real app, this would generate a shareable file or link
-        // For this demo, we'll just show a notification
-        this.showNotification('Export feature would generate a file here', 'success');
+        // Add all objects to the container
+        const container = document.getElementById('house-container');
         
-        // Alternatively, you could offer to export:
-        // 1. As a 3D model (e.g., .gltf, .obj)
-        // 2. As a 2D floor plan image
-        // 3. As measurements/dimensions for construction
-    }
+        this.objects.forEach(obj => {
+            container.appendChild(obj.element);
+        });
+    },
     
-    showHelp() {
-        // In a real app, this would show a help modal or guide
-        this.showNotification('Help feature would show usage instructions here', 'success');
-    }
-    
-    // UI helper methods
-    
-    showGuidance(text) {
-        this.guidance.textContent = text;
-        this.guidance.style.display = 'block';
-    }
-    
-    showNotification(message, type = '') {
-        const notification = this.notification;
-        notification.textContent = message;
-        notification.className = ''; // Clear previous classes
+    showNotification(message, type = 'info') {
+        const notification = document.getElementById('notification');
+        const text = document.getElementById('notification-text');
         
-        // Add notification class
+        // Set message and type
+        text.textContent = message;
+        
+        // Remove all type classes
+        notification.classList.remove('info', 'success', 'error');
+        
+        // Add the appropriate type class
+        notification.classList.add(type);
+        
+        // Show the notification
         notification.classList.add('show');
-        
-        // Add type class if specified
-        if (type) {
-            notification.classList.add(type);
-        }
         
         // Hide after 3 seconds
         setTimeout(() => {
             notification.classList.remove('show');
         }, 3000);
+    },
+    
+    updateUI() {
+        // Update the UI based on the current state
+        // This is called when the application initializes or when the state changes
+        
+        // Set the correct mode button
+        document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`${this.mode}-btn`).classList.add('active');
+        
+        // Show or hide panels based on mode
+        if (this.mode === 'build' || this.mode === 'decorate') {
+            document.getElementById('category-panel').style.display = 'flex';
+        } else {
+            document.getElementById('category-panel').style.display = 'none';
+        }
     }
-}
+};
+
+// Initialize the application when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    APP.init();
+});

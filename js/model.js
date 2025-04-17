@@ -1,393 +1,312 @@
 /**
- * Models manager for the floor plan designer
- * Handles loading and management of 3D models for furniture and elements
+ * EasyFloor - 3D Models
+ * Utilizes custom 3D models from the assets folder
  */
-class ModelsManager {
-    constructor() {
-        this.modelRegistry = {
-            // Basic furniture
-            'sofa': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 2, height: 0.5, depth: 0.8, color: '#6082B6', position: { x: 0, y: 0.25, z: 0 } },
-                    { primitive: 'box', width: 2, height: 0.7, depth: 0.2, color: '#6082B6', position: { x: 0, y: 0.85, z: -0.3 } },
-                    { primitive: 'box', width: 0.2, height: 0.7, depth: 0.8, color: '#6082B6', position: { x: 0.9, y: 0.6, z: 0 } },
-                    { primitive: 'box', width: 0.2, height: 0.7, depth: 0.8, color: '#6082B6', position: { x: -0.9, y: 0.6, z: 0 } }
-                ],
-                boundingBox: { width: 2, height: 1, depth: 0.8 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: false,
-                    rotationStep: 90,
-                    elevationOffset: 0
-                }
-            },
-            'chair': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 0.5, height: 0.05, depth: 0.5, color: '#8B4513', position: { x: 0, y: 0.4, z: 0 } },
-                    { primitive: 'box', width: 0.5, height: 0.5, depth: 0.05, color: '#8B4513', position: { x: 0, y: 0.65, z: -0.25 } },
-                    { primitive: 'box', width: 0.05, height: 0.4, depth: 0.05, color: '#8B4513', position: { x: 0.2, y: 0.2, z: 0.2 } },
-                    { primitive: 'box', width: 0.05, height: 0.4, depth: 0.05, color: '#8B4513', position: { x: 0.2, y: 0.2, z: -0.2 } },
-                    { primitive: 'box', width: 0.05, height: 0.4, depth: 0.05, color: '#8B4513', position: { x: -0.2, y: 0.2, z: 0.2 } },
-                    { primitive: 'box', width: 0.05, height: 0.4, depth: 0.05, color: '#8B4513', position: { x: -0.2, y: 0.2, z: -0.2 } }
-                ],
-                boundingBox: { width: 0.5, height: 0.9, depth: 0.5 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: false,
-                    rotationStep: 45,
-                    elevationOffset: 0
-                }
-            },
-            'table': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 1.2, height: 0.05, depth: 0.8, color: '#8B4513', position: { x: 0, y: 0.7, z: 0 } },
-                    { primitive: 'box', width: 0.05, height: 0.7, depth: 0.05, color: '#8B4513', position: { x: 0.55, y: 0.35, z: 0.35 } },
-                    { primitive: 'box', width: 0.05, height: 0.7, depth: 0.05, color: '#8B4513', position: { x: 0.55, y: 0.35, z: -0.35 } },
-                    { primitive: 'box', width: 0.05, height: 0.7, depth: 0.05, color: '#8B4513', position: { x: -0.55, y: 0.35, z: 0.35 } },
-                    { primitive: 'box', width: 0.05, height: 0.7, depth: 0.05, color: '#8B4513', position: { x: -0.55, y: 0.35, z: -0.35 } }
-                ],
-                boundingBox: { width: 1.2, height: 0.7, depth: 0.8 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: false,
-                    rotationStep: 90,
-                    elevationOffset: 0
-                }
-            },
-            'bed': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 1.6, height: 0.3, depth: 2, color: '#8B4513', position: { x: 0, y: 0.15, z: 0 } },
-                    { primitive: 'box', width: 1.6, height: 0.1, depth: 2, color: '#F5F5DC', position: { x: 0, y: 0.35, z: 0 } },
-                    { primitive: 'box', width: 1.6, height: 0.6, depth: 0.1, color: '#8B4513', position: { x: 0, y: 0.65, z: -0.95 } }
-                ],
-                boundingBox: { width: 1.6, height: 0.45, depth: 2 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: false,
-                    rotationStep: 90,
-                    elevationOffset: 0
-                }
-            },
-            'tv': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 1.2, height: 0.7, depth: 0.1, color: '#333333', position: { x: 0, y: 1.2, z: 0 } },
-                    { primitive: 'box', width: 0.6, height: 0.1, depth: 0.4, color: '#555555', position: { x: 0, y: 0.05, z: 0 } },
-                    { primitive: 'box', width: 0.1, height: 0.7, depth: 0.1, color: '#555555', position: { x: 0, y: 0.4, z: 0 } }
-                ],
-                boundingBox: { width: 1.2, height: 1.9, depth: 0.4 },
-                placementRules: {
-                    validSurfaces: ['floor', 'table'],
-                    placeOnWalls: true,
-                    rotationStep: 90,
-                    elevationOffset: 0
-                }
-            },
-            'counter': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 1.5, height: 0.05, depth: 0.6, color: '#D3D3D3', position: { x: 0, y: 0.9, z: 0 } },
-                    { primitive: 'box', width: 1.5, height: 0.9, depth: 0.6, color: '#A9A9A9', position: { x: 0, y: 0.45, z: 0 } }
-                ],
-                boundingBox: { width: 1.5, height: 0.9, depth: 0.6 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: true,
-                    rotationStep: 90,
-                    elevationOffset: 0
-                }
-            },
-            'fridge': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 0.8, height: 1.8, depth: 0.8, color: '#E0E0E0', position: { x: 0, y: 0.9, z: 0 } },
-                    { primitive: 'box', width: 0.7, height: 0.8, depth: 0.1, color: '#D0D0D0', position: { x: 0, y: 1.3, z: -0.35 } },
-                    { primitive: 'box', width: 0.7, height: 0.8, depth: 0.1, color: '#D0D0D0', position: { x: 0, y: 0.5, z: -0.35 } }
-                ],
-                boundingBox: { width: 0.8, height: 1.8, depth: 0.8 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: false,
-                    rotationStep: 90,
-                    elevationOffset: 0
-                }
-            },
-            'wardrobe': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 1.2, height: 2, depth: 0.6, color: '#8B4513', position: { x: 0, y: 1, z: 0 } },
-                    { primitive: 'box', width: 0.4, height: 1.8, depth: 0.05, color: '#A0522D', position: { x: -0.35, y: 1, z: -0.28 } },
-                    { primitive: 'box', width: 0.4, height: 1.8, depth: 0.05, color: '#A0522D', position: { x: 0.35, y: 1, z: -0.28 } },
-                    { primitive: 'sphere', radius: 0.03, color: '#FFD700', position: { x: -0.35, y: 1, z: -0.3 } },
-                    { primitive: 'sphere', radius: 0.03, color: '#FFD700', position: { x: 0.35, y: 1, z: -0.3 } }
-                ],
-                boundingBox: { width: 1.2, height: 2, depth: 0.6 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: true,
-                    rotationStep: 90,
-                    elevationOffset: 0
-                }
-            },
-            // Structural elements
-            'wall': {
-                type: 'primitive',
-                primitive: 'box',
-                defaultDimensions: { width: 1, height: 2.7, depth: 0.15 },
-                defaultColor: '#F5F5F5',
-                boundingBox: { width: 1, height: 2.7, depth: 0.15 },
-                placementRules: {
-                    validSurfaces: ['floor'],
-                    placeOnWalls: false,
-                    rotationStep: 1,
-                    elevationOffset: 1.35  // Half of height
-                }
-            },
-            'door': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 1, height: 2.2, depth: 0.2, color: '#A0522D', position: { x: 0, y: 1.1, z: 0 }, class: 'door-frame' },
-                    { primitive: 'box', width: 0.9, height: 2.1, depth: 0.05, color: '#CD853F', position: { x: 0, y: 1.05, z: 0.06 }, class: 'door-panel' },
-                    { primitive: 'sphere', radius: 0.03, color: '#FFD700', position: { x: 0.35, y: 1.05, z: 0.1 }, class: 'door-knob' }
-                ],
-                boundingBox: { width: 1, height: 2.2, depth: 0.2 },
-                placementRules: {
-                    validSurfaces: ['wall'],
-                    placeOnWalls: true,
-                    rotationStep: 90,
-                    elevationOffset: 1.1  // Half of height
-                }
-            },
-            'window': {
-                type: 'composite',
-                components: [
-                    { primitive: 'box', width: 1.2, height: 1.2, depth: 0.2, color: '#A0522D', position: { x: 0, y: 1.5, z: 0 }, class: 'window-frame' },
-                    { primitive: 'box', width: 1, height: 1, depth: 0.05, color: '#87CEEB', position: { x: 0, y: 1.5, z: 0 }, class: 'window-glass', opacity: 0.7 }
-                ],
-                boundingBox: { width: 1.2, height: 1.2, depth: 0.2 },
-                placementRules: {
-                    validSurfaces: ['wall'],
-                    placeOnWalls: true,
-                    rotationStep: 90,
-                    elevationOffset: 1.5  // Half of height
-                }
-            }
-        };
-        
-        // Material presets
-        this.materialPresets = {
-            wallMaterials: [
-                { name: 'White Paint', color: '#F5F5F5', texture: null },
-                { name: 'Light Gray', color: '#D3D3D3', texture: null },
-                { name: 'Dark Gray', color: '#A9A9A9', texture: null },
-                { name: 'Lavender', color: '#E6E6FA', texture: null },
-                { name: 'Blush', color: '#FFE4E1', texture: null }
-            ],
-            floorMaterials: [
-                { name: 'Hardwood', color: '#8B4513', texture: 'texture-hardwood.jpg' },
-                { name: 'Tile', color: '#F5F5F5', texture: 'texture-tile.jpg' },
-                { name: 'Carpet', color: '#A0A0A0', texture: 'texture-carpet.jpg' },
-                { name: 'Marble', color: '#F0F0F0', texture: 'texture-marble.jpg' },
-                { name: 'Concrete', color: '#C0C0C0', texture: 'texture-concrete.jpg' }
-            ],
-            woodMaterials: [
-                { name: 'Dark Oak', color: '#8B4513', texture: null },
-                { name: 'Maple', color: '#CD853F', texture: null },
-                { name: 'Cherry', color: '#A0522D', texture: null },
-                { name: 'Walnut', color: '#5C4033', texture: null },
-                { name: 'Pine', color: '#DEB887', texture: null }
-            ]
-        };
-    }
 
-    /**
-     * Create a model entity based on a registered model type
-     * @param {string} modelType - The type of model to create
-     * @param {object} position - The position to place the model
-     * @param {object} options - Additional options like rotation, scale, etc.
-     * @returns {Element} The created entity element
-     */
-    createModel(modelType, position, options = {}) {
-        // Check if model type exists
-        if (!this.modelRegistry[modelType]) {
-            console.error(`Model type '${modelType}' not found in registry`);
-            return null;
-        }
-        
-        const model = this.modelRegistry[modelType];
-        const entity = document.createElement('a-entity');
-        
-        // Add model identification classes and attributes
-        entity.classList.add('interactive', modelType);
-        entity.setAttribute('data-type', modelType);
-        
-        // Set position, rotation and scale
-        const rotation = options.rotation || { x: 0, y: 0, z: 0 };
-        const scale = options.scale || { x: 1, y: 1, z: 1 };
-        
-        entity.setAttribute('position', position);
-        entity.setAttribute('rotation', rotation);
-        entity.setAttribute('scale', scale);
-        
-        // Create model based on its type
-        if (model.type === 'primitive') {
-            // Single primitive shape
-            const dimensions = options.dimensions || model.defaultDimensions;
-            const color = options.color || model.defaultColor;
-            
-            const primitive = document.createElement(`a-${model.primitive}`);
-            
-            // Set dimensions based on primitive type
-            if (model.primitive === 'box') {
-                primitive.setAttribute('width', dimensions.width);
-                primitive.setAttribute('height', dimensions.height);
-                primitive.setAttribute('depth', dimensions.depth);
-            } else if (model.primitive === 'cylinder') {
-                primitive.setAttribute('radius', dimensions.radius);
-                primitive.setAttribute('height', dimensions.height);
-            } else if (model.primitive === 'sphere') {
-                primitive.setAttribute('radius', dimensions.radius);
-            }
-            
-            primitive.setAttribute('color', color);
-            primitive.classList.add('collidable');
-            
-            entity.appendChild(primitive);
-        } else if (model.type === 'composite') {
-            // Composite model made of multiple primitives
-            const color = options.color; // Optional override color
-            
-            model.components.forEach(component => {
-                const componentEl = document.createElement(`a-${component.primitive}`);
-                
-                // Set dimensions based on primitive type
-                if (component.primitive === 'box') {
-                    componentEl.setAttribute('width', component.width);
-                    componentEl.setAttribute('height', component.height);
-                    componentEl.setAttribute('depth', component.depth);
-                } else if (component.primitive === 'cylinder') {
-                    componentEl.setAttribute('radius', component.radius);
-                    componentEl.setAttribute('height', component.height);
-                } else if (component.primitive === 'sphere') {
-                    componentEl.setAttribute('radius', component.radius);
-                }
-                
-                // Set position relative to entity center
-                componentEl.setAttribute('position', component.position);
-                
-                // Set color (use override if specified)
-                componentEl.setAttribute('color', color || component.color);
-                
-                // Set opacity if specified
-                if (component.opacity) {
-                    componentEl.setAttribute('opacity', component.opacity);
-                }
-                
-                // Add class if specified
-                if (component.class) {
-                    componentEl.classList.add(component.class);
-                }
-                
-                componentEl.classList.add('collidable');
-                
-                entity.appendChild(componentEl);
-            });
-        } else if (model.type === 'gltf') {
-            // Advanced 3D models (future implementation)
-            entity.setAttribute('gltf-model', model.src);
-        }
-        
-        // Add collision detection data
-        entity.setAttribute('data-bounding-box', JSON.stringify(model.boundingBox));
-        entity.setAttribute('data-placement-rules', JSON.stringify(model.placementRules));
-        
-        return entity;
+const MODELS = {
+    // STRUCTURES
+    
+    // Wall models
+    wall: {
+        displayName: 'Wall',
+        category: 'structures',
+        subcategory: 'walls',
+        model: '#wall-model', // Reference to a-asset id
+        boundingBox: { width: 4, height: 2.7, depth: 0.15 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-grip-lines-vertical',
+        materials: ['#F5F5F5', '#E0E0E0', '#FAFAFA', '#D3D3D3', '#A9A9A9', '#CD5C5C', '#8B4513', '#D2B48C', '#FFEBCD', '#DEB887'],
+        materialComponent: 'wall-material' // Material component name for color changes
+    },
+    
+    // Floor models
+    floor: {
+        displayName: 'Floor',
+        category: 'structures',
+        subcategory: 'floors',
+        model: '#floor-model',
+        boundingBox: { width: 4, height: 0.05, depth: 4 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-square',
+        materials: ['#E8E8E8', '#D3D3D3', '#F5F5F5', '#8B4513', '#D2B48C', '#FFEBCD', '#DEB887', '#808080'],
+        materialComponent: 'floor-material'
+    },
+    
+    // Window
+    window: {
+        displayName: 'Window',
+        category: 'structures',
+        subcategory: 'openings',
+        model: '#window-model',
+        boundingBox: { width: 1, height: 1.2, depth: 0.2 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-window-maximize',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'window-frame-material'
+    },
+    
+    // Door
+    door: {
+        displayName: 'Door',
+        category: 'structures',
+        subcategory: 'openings',
+        model: '#door-model',
+        boundingBox: { width: 1, height: 2.2, depth: 0.2 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-door-open',
+        materials: ['#A0522D', '#8B4513', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'door-material'
+    },
+    
+    // Roof
+    roof: {
+        displayName: 'Roof',
+        category: 'structures',
+        subcategory: 'roofs',
+        model: '#roof-model',
+        boundingBox: { width: 4, height: 0.2, depth: 4 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-home',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B', '#800000', '#A52A2A', '#B22222', '#DC143C'],
+        materialComponent: 'roof-material'
+    },
+    
+    // Stairs
+    stairs: {
+        displayName: 'Stairs',
+        category: 'structures',
+        subcategory: 'stairs',
+        model: '#stairs-model',
+        boundingBox: { width: 1.5, height: 3, depth: 3 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-stairs',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'stairs-material'
+    },
+    
+    // LIVING ROOM FURNITURE
+    
+    // Sofa
+    sofa: {
+        displayName: 'Sofa',
+        category: 'furniture',
+        subcategory: 'living room',
+        model: '#sofa-model',
+        boundingBox: { width: 2, height: 0.8, depth: 1 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-couch',
+        materials: ['#4682B4', '#87CEEB', '#1E90FF', '#6495ED', '#4169E1', '#696969', '#808080', '#A9A9A9', '#C0C0C0', '#D3D3D3'],
+        materialComponent: 'sofa-material'
+    },
+    
+    // Coffee table
+    'coffee-table': {
+        displayName: 'Coffee Table',
+        category: 'furniture',
+        subcategory: 'living room',
+        model: '#coffee-table-model',
+        boundingBox: { width: 1.2, height: 0.4, depth: 0.8 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-tablet-alt',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'table-material'
+    },
+    
+    // TV
+    tv: {
+        displayName: 'TV',
+        category: 'furniture',
+        subcategory: 'electronics',
+        model: '#tv-model',
+        boundingBox: { width: 1.4, height: 0.8, depth: 0.1 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-tv',
+        materials: ['#2F4F4F', '#000000', '#696969', '#808080'],
+        materialComponent: 'tv-material'
+    },
+    
+    // BEDROOM FURNITURE
+    
+    // Bed
+    bed: {
+        displayName: 'Bed',
+        category: 'furniture',
+        subcategory: 'bedroom',
+        model: '#bed-model',
+        boundingBox: { width: 1.6, height: 0.5, depth: 2 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-bed',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'bed-frame-material'
+    },
+    
+    // Wardrobe
+    wardrobe: {
+        displayName: 'Wardrobe',
+        category: 'furniture',
+        subcategory: 'bedroom',
+        model: '#wardrobe-model',
+        boundingBox: { width: 1.2, height: 2, depth: 0.6 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-archive',
+        materials: ['#A0522D', '#8B4513', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'wardrobe-material'
+    },
+    
+    // Nightstand
+    nightstand: {
+        displayName: 'Nightstand',
+        category: 'furniture',
+        subcategory: 'bedroom',
+        model: '#nightstand-model',
+        boundingBox: { width: 0.4, height: 0.5, depth: 0.4 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-cube',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'nightstand-material'
+    },
+    
+    // KITCHEN FURNITURE
+    
+    // Counter
+    counter: {
+        displayName: 'Kitchen Counter',
+        category: 'furniture',
+        subcategory: 'kitchen',
+        model: '#counter-model',
+        boundingBox: { width: 1.8, height: 0.9, depth: 0.6 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-border-all',
+        materials: ['#A9A9A9', '#D3D3D3', '#C0C0C0', '#E8E8E8', '#F5F5F5'],
+        materialComponent: 'counter-material'
+    },
+    
+    // Fridge
+    fridge: {
+        displayName: 'Refrigerator',
+        category: 'furniture',
+        subcategory: 'kitchen',
+        model: '#fridge-model',
+        boundingBox: { width: 0.8, height: 1.8, depth: 0.7 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-cube',
+        materials: ['#D3D3D3', '#C0C0C0', '#A9A9A9', '#E8E8E8', '#F5F5F5'],
+        materialComponent: 'fridge-material'
+    },
+    
+    // Sink
+    sink: {
+        displayName: 'Kitchen Sink',
+        category: 'furniture',
+        subcategory: 'kitchen',
+        model: '#sink-model',
+        boundingBox: { width: 0.8, height: 0.2, depth: 0.5 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-sink',
+        materials: ['#C0C0C0', '#A9A9A9', '#D3D3D3', '#E8E8E8', '#F5F5F5'],
+        materialComponent: 'sink-material'
+    },
+    
+    // BATHROOM FIXTURES
+    
+    // Bathtub
+    bathtub: {
+        displayName: 'Bathtub',
+        category: 'furniture',
+        subcategory: 'bathroom',
+        model: '#bathtub-model',
+        boundingBox: { width: 0.7, height: 0.5, depth: 1.7 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-bath',
+        materials: ['#FFFFFF', '#F5F5F5', '#E8E8E8', '#D3D3D3', '#C0C0C0'],
+        materialComponent: 'bathtub-material'
+    },
+    
+    // Toilet
+    toilet: {
+        displayName: 'Toilet',
+        category: 'furniture',
+        subcategory: 'bathroom',
+        model: '#toilet-model',
+        boundingBox: { width: 0.4, height: 0.4, depth: 0.6 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-toilet',
+        materials: ['#FFFFFF', '#F5F5F5', '#E8E8E8', '#D3D3D3', '#C0C0C0'],
+        materialComponent: 'toilet-material'
+    },
+    
+    // Bathroom sink
+    'sink-bathroom': {
+        displayName: 'Bathroom Sink',
+        category: 'furniture',
+        subcategory: 'bathroom',
+        model: '#sink-bathroom-model',
+        boundingBox: { width: 0.6, height: 0.8, depth: 0.5 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-sink',
+        materials: ['#FFFFFF', '#F5F5F5', '#E8E8E8', '#D3D3D3', '#C0C0C0'],
+        materialComponent: 'sink-bathroom-material'
+    },
+    
+    // ROOM TEMPLATES
+    
+    'room-bedroom': {
+        displayName: 'Bedroom Template',
+        category: 'templates',
+        subcategory: 'rooms',
+        icon: 'fas fa-bed',
+        // This is a composite template that will place multiple objects
+        template: [
+            { type: 'floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1.5, y: 1, z: 1.5 } },
+            { type: 'wall', position: { x: 0, y: 1.35, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'wall', position: { x: 0, y: 1.35, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'wall', position: { x: -3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall', position: { x: 3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'door', position: { x: 0, y: 1.1, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'window', position: { x: 3, y: 1.5, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'bed', position: { x: -1.5, y: 0.25, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wardrobe', position: { x: 2, y: 1, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'nightstand', position: { x: -1.5, y: 0.25, z: -1.5 }, rotation: { x: 0, y: 0, z: 0 } }
+        ]
+    },
+    
+    'room-kitchen': {
+        displayName: 'Kitchen Template',
+        category: 'templates',
+        subcategory: 'rooms',
+        icon: 'fas fa-utensils',
+        template: [
+            { type: 'floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1.5, y: 1, z: 1.5 } },
+            { type: 'wall', position: { x: 0, y: 1.35, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'wall', position: { x: 0, y: 1.35, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'wall', position: { x: -3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall', position: { x: 3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'door', position: { x: -3, y: 1.1, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'window', position: { x: 0, y: 1.5, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'counter', position: { x: 2, y: 0.45, z: -1 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'counter', position: { x: 2, y: 0.45, z: 1 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'counter', position: { x: 0, y: 0.45, z: 2.5 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'sink', position: { x: 0, y: 0.875, z: 2.5 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'fridge', position: { x: -2, y: 0.9, z: -2 }, rotation: { x: 0, y: 90, z: 0 } }
+        ]
+    },
+    
+    'room-bathroom': {
+        displayName: 'Bathroom Template',
+        category: 'templates',
+        subcategory: 'rooms',
+        icon: 'fas fa-bath',
+        template: [
+            { type: 'floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+            { type: 'wall', position: { x: 0, y: 1.35, z: -2 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'wall', position: { x: 0, y: 1.35, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'wall', position: { x: -2, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall', position: { x: 2, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'door', position: { x: -2, y: 1.1, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'window', position: { x: 0, y: 1.5, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'bathtub', position: { x: 1.5, y: 0.25, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'sink-bathroom', position: { x: -1, y: 0.4, z: 1.5 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'toilet', position: { x: -1, y: 0.2, z: -1 }, rotation: { x: 0, y: 0, z: 0 } }
+        ]
     }
-
-    /**
-     * Check if a model can be placed at a specific position
-     * @param {string} modelType - The type of model to place
-     * @param {object} position - The position to check
-     * @param {object} rotation - The rotation of the model
-     * @returns {boolean} True if placement is valid
-     */
-    canPlaceModel(modelType, position, rotation = { x: 0, y: 0, z: 0 }) {
-        if (!this.modelRegistry[modelType]) return false;
-        
-        const model = this.modelRegistry[modelType];
-        const placementRules = model.placementRules;
-        const boundingBox = model.boundingBox;
-        
-        // Check if there are existing objects at this position
-        return !this.checkCollision(modelType, position, rotation, boundingBox);
-    }
-
-    /**
-     * Check for collisions with existing objects
-     * @param {string} modelType - The type of model to check
-     * @param {object} position - The position to check
-     * @param {object} rotation - The rotation of the model
-     * @param {object} boundingBox - The model's bounding box
-     * @returns {boolean} True if collision detected
-     */
-    checkCollision(modelType, position, rotation, boundingBox) {
-        // Simple placeholder for collision detection
-        // In a real implementation, you would use proper physics/collision detection
-        const existingObjects = document.querySelectorAll('.interactive');
-        
-        // Simple distance-based collision check
-        for (let obj of existingObjects) {
-            const objType = obj.getAttribute('data-type');
-            const objPos = obj.getAttribute('position');
-            const objBoundingBoxStr = obj.getAttribute('data-bounding-box');
-            
-            if (!objBoundingBoxStr) continue;
-            
-            const objBoundingBox = JSON.parse(objBoundingBoxStr);
-            
-            // If this is a wall placement, allow intersecting with other walls for corners
-            if (modelType === 'wall' && objType === 'wall') continue;
-            
-            // For doors and windows, check if they're being placed on walls
-            if ((modelType === 'door' || modelType === 'window') && objType === 'wall') {
-                // Allow placement on walls
-                continue;
-            }
-            
-            // Simple distance check based on combined dimensions
-            const combinedWidth = (boundingBox.width + objBoundingBox.width) / 2;
-            const combinedDepth = (boundingBox.depth + objBoundingBox.depth) / 2;
-            
-            const distanceX = Math.abs(position.x - objPos.x);
-            const distanceZ = Math.abs(position.z - objPos.z);
-            
-            if (distanceX < combinedWidth * 0.8 && distanceZ < combinedDepth * 0.8) {
-                return true; // Collision detected
-            }
-        }
-        
-        return false; // No collision
-    }
-
-    /**
-     * Get material options for a specific category
-     * @param {string} category - Material category ('wall', 'floor', 'wood')
-     * @returns {Array} Array of material options
-     */
-    getMaterialOptions(category) {
-        switch (category) {
-            case 'wall':
-                return this.materialPresets.wallMaterials;
-            case 'floor':
-                return this.materialPresets.floorMaterials;
-            case 'wood':
-                return this.materialPresets.woodMaterials;
-            default:
-                return this.materialPresets.wallMaterials;
-        }
-    }
-}
+};
