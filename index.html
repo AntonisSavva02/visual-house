@@ -871,31 +871,50 @@
     <a-scene embedded vr-mode-ui="enabled: true">
         <!-- Assets -->
         <a-assets>
-            <!-- 3D Models -->
-            <a-asset-item id="wall-model" src="assets/models/wall.gltf"></a-asset-item>
-            <a-asset-item id="floor-model" src="assets/models/floor.gltf"></a-asset-item>
-            <a-asset-item id="door-model" src="assets/models/door.gltf"></a-asset-item>
-            <a-asset-item id="window-model" src="assets/models/window.gltf"></a-asset-item>
-            <a-asset-item id="roof-model" src="assets/models/roof.gltf"></a-asset-item>
-            <a-asset-item id="stairs-model" src="assets/models/stairs.gltf"></a-asset-item>
+            <!-- Structure Models -->
+            <a-asset-item id="blank-wall" src="assets/models/walls/blank_wall.glb"></a-asset-item>
+            <a-asset-item id="wall_with_door" src="assets/models/walls/wall_with_door.glb"></a-asset-item>
+            <a-asset-item id="wall_with_window" src="assets/models/walls/wall_with_window.glb"></a-asset-item>
 
-            <!-- Furniture Models -->
-            <a-asset-item id="sofa-model" src="assets/models/sofa.gltf"></a-asset-item>
-            <a-asset-item id="coffee-table-model" src="assets/models/coffee-table.gltf"></a-asset-item>
-            <a-asset-item id="tv-model" src="assets/models/tv.gltf"></a-asset-item>
-            <a-asset-item id="bed-model" src="assets/models/bed.gltf"></a-asset-item>
-            <a-asset-item id="wardrobe-model" src="assets/models/wardrobe.gltf"></a-asset-item>
-            <a-asset-item id="nightstand-model" src="assets/models/nightstand.gltf"></a-asset-item>
+            <!--Floor Models-->
+            <a-asset-item id="concrete_floor" src="assets/models/floors/concrete_floor.gltf"></a-asset-item>
+            <a-asset-item id="wood_floor" src="assets/models/floors/wood_floor.gltf"></a-asset-item>
 
-            <!-- Kitchen Models -->
-            <a-asset-item id="counter-model" src="assets/models/counter.gltf"></a-asset-item>
-            <a-asset-item id="fridge-model" src="assets/models/fridge.gltf"></a-asset-item>
-            <a-asset-item id="sink-model" src="assets/models/sink.gltf"></a-asset-item>
+            <!--Roof Models-->
+            <a-asset-item id="brick_roof" src="assets/models/roofs/brick_roof.gltf"></a-asset-item>
+            <a-asset-item id="polygonal_roof" src="assets/models/roofs/polygonal_roof.gltf"></a-asset-item>
+            <a-asset-item id="tile_roof" src="assets/models/roofs/tile_roof.gltf"></a-asset-item>
 
-            <!-- Bathroom Models -->
-            <a-asset-item id="bathtub-model" src="assets/models/bathtub.gltf"></a-asset-item>
-            <a-asset-item id="toilet-model" src="assets/models/toilet.gltf"></a-asset-item>
-            <a-asset-item id="sink-bathroom-model" src="assets/models/sink-bathroom.gltf"></a-asset-item>
+            <!--Bathrroom Models-->
+            <a-asset-item id="bathroom" src="assets/models/bathroom/bathroom.gltf"></a-asset-item>
+            <a-asset-item id="bathroom_1" src="assets/models/bathroom/bathroom(1).gltf"></a-asset-item>
+            <a-asset-item id="toilet" src="assets/models/bathroom/toilet.gltf"></a-asset-item>
+
+            <!--Bedroom Models-->
+            <a-asset-item id="bed" src="assets/models/bedroom/bed.gltf"></a-asset-item>
+        
+            <!--Accessories-->
+            <a-asset-item id="bookshelf" src="assets/models/accessories/bookshelf.gltf"></a-asset-item>
+            <a-asset-item id="house_lamp" src="assets/models/accessories/house_lamp.gltf"></a-asset-item>
+            <a-asset-item id="office_desk" src="assets/models/accessories/office_desk.gltf"></a-asset-item>
+            <a-asset-item id="tv" src="assets/models/accessories/tv.gltf"></a-asset-item>
+            <a-asset-item id="wall_shelf" src="assets/models/accessories/wall_shelf.gltf"></a-asset-item>
+            <a-asset-item id="wardrobe" src="assets/models/accessories/wardrobe.gltf"></a-asset-item>
+            <a-asset-item id="washing_machine" src="assets/models/accessories/washing_machine.gltf"></a-asset-item>
+
+            <!--Sofa Models-->
+            <a-asset-item id="big_sofa_set_1" src="assets/models/sofa/big_sofa_set_1.glb"></a-asset-item>
+            <a-asset-item id="small_sofa_set_1" src="assets/models/sofa/small_sofa_set_1.glb"></a-asset-item>
+            <a-asset-item id="chair_sofa_set_1" src="assets/models/sofa/chair_sofa_set_1.glb"></a-asset-item>
+            <a-asset-item id="sofa_set_2" src="assets/models/sofa/sofa_set_2.glb"></a-asset-item>
+            <a-asset-item id="chair_sofa_set_2" src="assets/models/sofa/chair_sofa_set_2.glb"></a-asset-item>
+
+            <!--Carpet Models-->
+            <a-asset-item id="sofa_set_2_carpet" src="assets/models/carpets/sofa_set_2_carpet.glb"></a-asset-item>
+
+            <!--Table Models-->
+            <a-asset-item id="sofa_set_2_table" src="assets/models/tables/sofa_set_2_table.glb"></a-asset-item>
+
         </a-assets>
         
         <!-- Environment (simple outdoor scene) -->
@@ -932,9 +951,9 @@
     </a-scene>
 
     <!-- JavaScript Files -->
-    <script src="models.js"></script>
-    <script src="camera-controller.js"></script>
-    <script src="collision-manager.js"></script>
-    <script src="app.js"></script>
+    <script src="js/model.js"></script>
+    <script src="js/camera-controller.js"></script>
+    <script src="js/collision-manager.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
