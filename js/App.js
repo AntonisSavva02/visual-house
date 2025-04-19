@@ -41,6 +41,15 @@ const APP = {
         
         // Show notification
         this.showNotification('Welcome to EasyFloor! Start by selecting an item from the panel.', 'info');
+        
+        // Fix button event listeners
+        document.querySelectorAll('.build-btn, .btn-icon').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                console.log('Button clicked:', this.id);
+                // Prevent event bubbling
+                e.stopPropagation();
+            });
+        });
     },
     
     setupEventListeners() {
@@ -232,7 +241,7 @@ const APP = {
         this.currentRotation = 0;
         
         // Get object details from models
-        const objectData = MODELS[objectType] || MODELS['wall']; // Default to wall if not found
+        const objectData = MODELS[objectType] || MODELS['blank-wall']; // Default to wall if not found
         
         // Create temporary object for placement preview
         const indicator = document.getElementById('placement-indicator');
@@ -307,8 +316,8 @@ const APP = {
             entity.setAttribute('gltf-model', objectData.model);
             entity.setAttribute('shadow', 'cast: true; receive: true');
             
-            // Store current material color for later changes
-            entity.setAttribute('data-color', objectData.materials[0]);
+            // Apply default textures and materials
+            this.applyDefaultTextures(entity, type);
         } 
         // Fall back to component-based or primitive creation if no model specified
         else if (objectData.components) {
@@ -344,6 +353,22 @@ const APP = {
         }
         
         return entity;
+    },
+    
+    applyDefaultTextures(obj, objectType) {
+        const objectData = MODELS[objectType];
+        
+        if (!objectData) return;
+        
+        // Set default material/color
+        if (objectData.materialComponent && objectData.materials && objectData.materials.length > 0) {
+            const defaultColor = objectData.materials[0];
+            obj.setAttribute(`material__${objectData.materialComponent}`, `color: ${defaultColor}`);
+            obj.setAttribute('data-color', defaultColor);
+        }
+        
+        // For GLTF models, ensure they cast and receive shadows
+        obj.setAttribute('shadow', 'cast: true; receive: true');
     },
     
     handleMouseDown(event) {

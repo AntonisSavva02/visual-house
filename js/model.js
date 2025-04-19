@@ -7,24 +7,50 @@ const MODELS = {
     // STRUCTURES
     
     // Wall models
-    wall: {
-        displayName: 'Wall',
+    'blank-wall': {
+        displayName: 'Blank Wall',
         category: 'structures',
         subcategory: 'walls',
-        model: '#wall-model', // Reference to a-asset id
+        model: '#blank-wall', 
         boundingBox: { width: 4, height: 2.7, depth: 0.15 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-grip-lines-vertical',
         materials: ['#F5F5F5', '#E0E0E0', '#FAFAFA', '#D3D3D3', '#A9A9A9', '#CD5C5C', '#8B4513', '#D2B48C', '#FFEBCD', '#DEB887'],
-        materialComponent: 'wall-material' // Material component name for color changes
+        materialComponent: 'wall-material'
+    },
+    
+    // Wall with door
+    'wall-with-door': {
+        displayName: 'Wall with Door',
+        category: 'structures',
+        subcategory: 'walls',
+        model: '#wall_with_door',
+        boundingBox: { width: 4, height: 2.7, depth: 0.15 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-door-open',
+        materials: ['#F5F5F5', '#E0E0E0', '#FAFAFA', '#D3D3D3', '#A9A9A9', '#CD5C5C', '#8B4513', '#D2B48C', '#FFEBCD', '#DEB887'],
+        materialComponent: 'wall-material'
+    },
+    
+    // Wall with window
+    'wall-with-window': {
+        displayName: 'Wall with Window',
+        category: 'structures',
+        subcategory: 'walls',
+        model: '#wall_with_window',
+        boundingBox: { width: 4, height: 2.7, depth: 0.15 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-window-maximize',
+        materials: ['#F5F5F5', '#E0E0E0', '#FAFAFA', '#D3D3D3', '#A9A9A9', '#CD5C5C', '#8B4513', '#D2B48C', '#FFEBCD', '#DEB887'],
+        materialComponent: 'wall-material'
     },
     
     // Floor models
-    floor: {
-        displayName: 'Floor',
+    'concrete-floor': {
+        displayName: 'Concrete Floor',
         category: 'structures',
         subcategory: 'floors',
-        model: '#floor-model',
+        model: '#concrete_floor',
         boundingBox: { width: 4, height: 0.05, depth: 4 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-square',
@@ -32,38 +58,25 @@ const MODELS = {
         materialComponent: 'floor-material'
     },
     
-    // Window
-    window: {
-        displayName: 'Window',
+    // Wood floor
+    'wood-floor': {
+        displayName: 'Wood Floor',
         category: 'structures',
-        subcategory: 'openings',
-        model: '#window-model',
-        boundingBox: { width: 1, height: 1.2, depth: 0.2 },
+        subcategory: 'floors',
+        model: '#wood_floor',
+        boundingBox: { width: 4, height: 0.05, depth: 4 },
         defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-window-maximize',
-        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
-        materialComponent: 'window-frame-material'
+        icon: 'fas fa-square',
+        materials: ['#8B4513', '#D2B48C', '#FFEBCD', '#DEB887', '#A0522D'],
+        materialComponent: 'floor-material'
     },
     
-    // Door
-    door: {
-        displayName: 'Door',
-        category: 'structures',
-        subcategory: 'openings',
-        model: '#door-model',
-        boundingBox: { width: 1, height: 2.2, depth: 0.2 },
-        defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-door-open',
-        materials: ['#A0522D', '#8B4513', '#CD853F', '#D2691E', '#B8860B'],
-        materialComponent: 'door-material'
-    },
-    
-    // Roof
-    roof: {
-        displayName: 'Roof',
+    // Roof models
+    'brick-roof': {
+        displayName: 'Brick Roof',
         category: 'structures',
         subcategory: 'roofs',
-        model: '#roof-model',
+        model: '#brick_roof',
         boundingBox: { width: 4, height: 0.2, depth: 4 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-home',
@@ -71,31 +84,111 @@ const MODELS = {
         materialComponent: 'roof-material'
     },
     
-    // Stairs
-    stairs: {
-        displayName: 'Stairs',
+    // Tile Roof
+    'tile-roof': {
+        displayName: 'Tile Roof',
         category: 'structures',
-        subcategory: 'stairs',
-        model: '#stairs-model',
-        boundingBox: { width: 1.5, height: 3, depth: 3 },
+        subcategory: 'roofs',
+        model: '#tile_roof',
+        boundingBox: { width: 4, height: 0.2, depth: 4 },
         defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-stairs',
+        icon: 'fas fa-home',
         materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
-        materialComponent: 'stairs-material'
+        materialComponent: 'roof-material'
+    },
+    
+    // Polygonal Roof
+    'polygonal-roof': {
+        displayName: 'Polygonal Roof',
+        category: 'structures',
+        subcategory: 'roofs',
+        model: '#polygonal_roof',
+        boundingBox: { width: 4, height: 0.5, depth: 4 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-home',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'roof-material'
+    },
+    
+    // BEDROOM FURNITURE
+    
+    // Bed
+    bed: {
+        displayName: 'Bed',
+        category: 'furniture',
+        subcategory: 'bedroom',
+        model: '#bed',
+        boundingBox: { width: 1.6, height: 0.5, depth: 2 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-bed',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'bed-frame-material'
     },
     
     // LIVING ROOM FURNITURE
     
-    // Sofa
-    sofa: {
-        displayName: 'Sofa',
+    // Sofa - big
+    'big-sofa': {
+        displayName: 'Big Sofa',
         category: 'furniture',
         subcategory: 'living room',
-        model: '#sofa-model',
+        model: '#big_sofa_set_1',
+        boundingBox: { width: 2.5, height: 0.9, depth: 1.2 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-couch',
+        materials: ['#4682B4', '#87CEEB', '#1E90FF', '#6495ED', '#4169E1'],
+        materialComponent: 'sofa-material'
+    },
+    
+    // Sofa - small
+    'small-sofa': {
+        displayName: 'Small Sofa',
+        category: 'furniture',
+        subcategory: 'living room',
+        model: '#small_sofa_set_1',
         boundingBox: { width: 2, height: 0.8, depth: 1 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-couch',
-        materials: ['#4682B4', '#87CEEB', '#1E90FF', '#6495ED', '#4169E1', '#696969', '#808080', '#A9A9A9', '#C0C0C0', '#D3D3D3'],
+        materials: ['#4682B4', '#87CEEB', '#1E90FF', '#6495ED', '#4169E1'],
+        materialComponent: 'sofa-material'
+    },
+    
+    // Chair sofa
+    'chair-sofa': {
+        displayName: 'Chair Sofa',
+        category: 'furniture',
+        subcategory: 'living room',
+        model: '#chair_sofa_set_1',
+        boundingBox: { width: 1, height: 0.8, depth: 1 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-chair',
+        materials: ['#4682B4', '#87CEEB', '#1E90FF', '#6495ED', '#4169E1'],
+        materialComponent: 'sofa-material'
+    },
+    
+    // Sofa set 2
+    'sofa-set-2': {
+        displayName: 'Sofa Set 2',
+        category: 'furniture',
+        subcategory: 'living room',
+        model: '#sofa_set_2',
+        boundingBox: { width: 2, height: 0.8, depth: 1 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-couch',
+        materials: ['#4682B4', '#87CEEB', '#1E90FF', '#6495ED', '#4169E1'],
+        materialComponent: 'sofa-material'
+    },
+    
+    // Chair sofa set 2
+    'chair-sofa-set-2': {
+        displayName: 'Chair Sofa Set 2',
+        category: 'furniture',
+        subcategory: 'living room',
+        model: '#chair_sofa_set_2',
+        boundingBox: { width: 1, height: 0.8, depth: 1 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-chair',
+        materials: ['#4682B4', '#87CEEB', '#1E90FF', '#6495ED', '#4169E1'],
         materialComponent: 'sofa-material'
     },
     
@@ -104,7 +197,7 @@ const MODELS = {
         displayName: 'Coffee Table',
         category: 'furniture',
         subcategory: 'living room',
-        model: '#coffee-table-model',
+        model: '#sofa_set_2_table',
         boundingBox: { width: 1.2, height: 0.4, depth: 0.8 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-tablet-alt',
@@ -117,7 +210,7 @@ const MODELS = {
         displayName: 'TV',
         category: 'furniture',
         subcategory: 'electronics',
-        model: '#tv-model',
+        model: '#tv',
         boundingBox: { width: 1.4, height: 0.8, depth: 0.1 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-tv',
@@ -125,27 +218,12 @@ const MODELS = {
         materialComponent: 'tv-material'
     },
     
-    // BEDROOM FURNITURE
-    
-    // Bed
-    bed: {
-        displayName: 'Bed',
-        category: 'furniture',
-        subcategory: 'bedroom',
-        model: '#bed-model',
-        boundingBox: { width: 1.6, height: 0.5, depth: 2 },
-        defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-bed',
-        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
-        materialComponent: 'bed-frame-material'
-    },
-    
     // Wardrobe
     wardrobe: {
         displayName: 'Wardrobe',
         category: 'furniture',
         subcategory: 'bedroom',
-        model: '#wardrobe-model',
+        model: '#wardrobe',
         boundingBox: { width: 1.2, height: 2, depth: 0.6 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-archive',
@@ -153,73 +231,97 @@ const MODELS = {
         materialComponent: 'wardrobe-material'
     },
     
-    // Nightstand
-    nightstand: {
-        displayName: 'Nightstand',
+    // Bookshelf
+    bookshelf: {
+        displayName: 'Bookshelf',
         category: 'furniture',
-        subcategory: 'bedroom',
-        model: '#nightstand-model',
-        boundingBox: { width: 0.4, height: 0.5, depth: 0.4 },
+        subcategory: 'living room',
+        model: '#bookshelf',
+        boundingBox: { width: 1.2, height: 1.8, depth: 0.4 },
         defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-cube',
+        icon: 'fas fa-book',
         materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
-        materialComponent: 'nightstand-material'
+        materialComponent: 'bookshelf-material'
     },
     
-    // KITCHEN FURNITURE
-    
-    // Counter
-    counter: {
-        displayName: 'Kitchen Counter',
+    // Office Desk
+    'office-desk': {
+        displayName: 'Office Desk',
         category: 'furniture',
-        subcategory: 'kitchen',
-        model: '#counter-model',
-        boundingBox: { width: 1.8, height: 0.9, depth: 0.6 },
+        subcategory: 'office',
+        model: '#office_desk',
+        boundingBox: { width: 1.4, height: 0.8, depth: 0.8 },
         defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-border-all',
-        materials: ['#A9A9A9', '#D3D3D3', '#C0C0C0', '#E8E8E8', '#F5F5F5'],
-        materialComponent: 'counter-material'
+        icon: 'fas fa-desk',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'desk-material'
     },
     
-    // Fridge
-    fridge: {
-        displayName: 'Refrigerator',
+    // House Lamp
+    'house-lamp': {
+        displayName: 'House Lamp',
         category: 'furniture',
-        subcategory: 'kitchen',
-        model: '#fridge-model',
-        boundingBox: { width: 0.8, height: 1.8, depth: 0.7 },
+        subcategory: 'lighting',
+        model: '#house_lamp',
+        boundingBox: { width: 0.6, height: 1.5, depth: 0.6 },
         defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-cube',
+        icon: 'fas fa-lightbulb',
+        materials: ['#F5DEB3', '#FFDEAD', '#FFE4B5', '#FFDAB9', '#EEE8AA'],
+        materialComponent: 'lamp-material'
+    },
+    
+    // Wall Shelf
+    'wall-shelf': {
+        displayName: 'Wall Shelf',
+        category: 'furniture',
+        subcategory: 'storage',
+        model: '#wall_shelf',
+        boundingBox: { width: 1.2, height: 0.3, depth: 0.4 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-archive',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'shelf-material'
+    },
+    
+    // Washing Machine
+    'washing-machine': {
+        displayName: 'Washing Machine',
+        category: 'furniture',
+        subcategory: 'appliances',
+        model: '#washing_machine',
+        boundingBox: { width: 0.7, height: 0.9, depth: 0.7 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-tshirt',
         materials: ['#D3D3D3', '#C0C0C0', '#A9A9A9', '#E8E8E8', '#F5F5F5'],
-        materialComponent: 'fridge-material'
-    },
-    
-    // Sink
-    sink: {
-        displayName: 'Kitchen Sink',
-        category: 'furniture',
-        subcategory: 'kitchen',
-        model: '#sink-model',
-        boundingBox: { width: 0.8, height: 0.2, depth: 0.5 },
-        defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-sink',
-        materials: ['#C0C0C0', '#A9A9A9', '#D3D3D3', '#E8E8E8', '#F5F5F5'],
-        materialComponent: 'sink-material'
+        materialComponent: 'washing-machine-material'
     },
     
     // BATHROOM FIXTURES
     
-    // Bathtub
-    bathtub: {
-        displayName: 'Bathtub',
+    // Bathroom set
+    bathroom: {
+        displayName: 'Bathroom Set',
         category: 'furniture',
         subcategory: 'bathroom',
-        model: '#bathtub-model',
-        boundingBox: { width: 0.7, height: 0.5, depth: 1.7 },
+        model: '#bathroom',
+        boundingBox: { width: 2, height: 1, depth: 2 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-bath',
         materials: ['#FFFFFF', '#F5F5F5', '#E8E8E8', '#D3D3D3', '#C0C0C0'],
-        materialComponent: 'bathtub-material'
+        materialComponent: 'bathroom-material'
+    },
+    
+    // Bathroom variation
+    'bathroom-alt': {
+        displayName: 'Bathroom Alt',
+        category: 'furniture',
+        subcategory: 'bathroom',
+        model: '#bathroom_1',
+        boundingBox: { width: 2, height: 1, depth: 2 },
+        defaultScale: { x: 1, y: 1, z: 1 },
+        icon: 'fas fa-bath',
+        materials: ['#FFFFFF', '#F5F5F5', '#E8E8E8', '#D3D3D3', '#C0C0C0'],
+        materialComponent: 'bathroom-material'
     },
     
     // Toilet
@@ -227,7 +329,7 @@ const MODELS = {
         displayName: 'Toilet',
         category: 'furniture',
         subcategory: 'bathroom',
-        model: '#toilet-model',
+        model: '#toilet',
         boundingBox: { width: 0.4, height: 0.4, depth: 0.6 },
         defaultScale: { x: 1, y: 1, z: 1 },
         icon: 'fas fa-toilet',
@@ -235,17 +337,17 @@ const MODELS = {
         materialComponent: 'toilet-material'
     },
     
-    // Bathroom sink
-    'sink-bathroom': {
-        displayName: 'Bathroom Sink',
+    // Carpet
+    carpet: {
+        displayName: 'Carpet',
         category: 'furniture',
-        subcategory: 'bathroom',
-        model: '#sink-bathroom-model',
-        boundingBox: { width: 0.6, height: 0.8, depth: 0.5 },
+        subcategory: 'decor',
+        model: '#sofa_set_2_carpet',
+        boundingBox: { width: 2, height: 0.05, depth: 1.5 },
         defaultScale: { x: 1, y: 1, z: 1 },
-        icon: 'fas fa-sink',
-        materials: ['#FFFFFF', '#F5F5F5', '#E8E8E8', '#D3D3D3', '#C0C0C0'],
-        materialComponent: 'sink-bathroom-material'
+        icon: 'fas fa-square',
+        materials: ['#8B4513', '#A0522D', '#CD853F', '#D2691E', '#B8860B'],
+        materialComponent: 'carpet-material'
     },
     
     // ROOM TEMPLATES
@@ -257,16 +359,16 @@ const MODELS = {
         icon: 'fas fa-bed',
         // This is a composite template that will place multiple objects
         template: [
-            { type: 'floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1.5, y: 1, z: 1.5 } },
-            { type: 'wall', position: { x: 0, y: 1.35, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'wall', position: { x: 0, y: 1.35, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'wall', position: { x: -3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'wall', position: { x: 3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'door', position: { x: 0, y: 1.1, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'window', position: { x: 3, y: 1.5, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'concrete-floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1.5, y: 1, z: 1.5 } },
+            { type: 'blank-wall', position: { x: 0, y: 1.35, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'blank-wall', position: { x: 0, y: 1.35, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'blank-wall', position: { x: -3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'blank-wall', position: { x: 3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall-with-door', position: { x: 0, y: 1.1, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'wall-with-window', position: { x: 3, y: 1.5, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
             { type: 'bed', position: { x: -1.5, y: 0.25, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
             { type: 'wardrobe', position: { x: 2, y: 1, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'nightstand', position: { x: -1.5, y: 0.25, z: -1.5 }, rotation: { x: 0, y: 0, z: 0 } }
+            { type: 'bookshelf', position: { x: -1.5, y: 0.25, z: -1.5 }, rotation: { x: 0, y: 0, z: 0 } }
         ]
     },
     
@@ -276,18 +378,18 @@ const MODELS = {
         subcategory: 'rooms',
         icon: 'fas fa-utensils',
         template: [
-            { type: 'floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1.5, y: 1, z: 1.5 } },
-            { type: 'wall', position: { x: 0, y: 1.35, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'wall', position: { x: 0, y: 1.35, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'wall', position: { x: -3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'wall', position: { x: 3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'door', position: { x: -3, y: 1.1, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'window', position: { x: 0, y: 1.5, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'counter', position: { x: 2, y: 0.45, z: -1 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'counter', position: { x: 2, y: 0.45, z: 1 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'counter', position: { x: 0, y: 0.45, z: 2.5 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'sink', position: { x: 0, y: 0.875, z: 2.5 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'fridge', position: { x: -2, y: 0.9, z: -2 }, rotation: { x: 0, y: 90, z: 0 } }
+            { type: 'concrete-floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1.5, y: 1, z: 1.5 } },
+            { type: 'blank-wall', position: { x: 0, y: 1.35, z: -3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'blank-wall', position: { x: 0, y: 1.35, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'blank-wall', position: { x: -3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'blank-wall', position: { x: 3, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall-with-door', position: { x: -3, y: 1.1, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall-with-window', position: { x: 0, y: 1.5, z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'big-sofa', position: { x: 2, y: 0.45, z: -1 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'small-sofa', position: { x: 2, y: 0.45, z: 1 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'coffee-table', position: { x: 0, y: 0.45, z: 2.5 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'tv', position: { x: 0, y: 0.875, z: 2.5 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'washing-machine', position: { x: -2, y: 0.45, z: -2 }, rotation: { x: 0, y: 90, z: 0 } }
         ]
     },
     
@@ -297,15 +399,14 @@ const MODELS = {
         subcategory: 'rooms',
         icon: 'fas fa-bath',
         template: [
-            { type: 'floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
-            { type: 'wall', position: { x: 0, y: 1.35, z: -2 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'wall', position: { x: 0, y: 1.35, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'wall', position: { x: -2, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'wall', position: { x: 2, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'door', position: { x: -2, y: 1.1, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'window', position: { x: 0, y: 1.5, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
-            { type: 'bathtub', position: { x: 1.5, y: 0.25, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
-            { type: 'sink-bathroom', position: { x: -1, y: 0.4, z: 1.5 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'concrete-floor', position: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+            { type: 'blank-wall', position: { x: 0, y: 1.35, z: -2 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'blank-wall', position: { x: 0, y: 1.35, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'blank-wall', position: { x: -2, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'blank-wall', position: { x: 2, y: 1.35, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall-with-door', position: { x: -2, y: 1.1, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
+            { type: 'wall-with-window', position: { x: 0, y: 1.5, z: 2 }, rotation: { x: 0, y: 0, z: 0 } },
+            { type: 'bathroom', position: { x: 1.5, y: 0.25, z: 0 }, rotation: { x: 0, y: 90, z: 0 } },
             { type: 'toilet', position: { x: -1, y: 0.2, z: -1 }, rotation: { x: 0, y: 0, z: 0 } }
         ]
     }
