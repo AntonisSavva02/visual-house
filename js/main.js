@@ -1,25 +1,27 @@
-// Initialize the application when the document is ready
+// Wait for the A-Frame scene to load before initializing
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize main app components
-    const app = new FloorPlanApp();
-    const cameraController = new CameraController();
-    const modelsManager = new ModelsManager();
+    console.log('DOM content loaded, waiting for A-Frame scene...');
     
-    // Make the models manager available to the app
-    app.modelsManager = modelsManager;
-    
-    // Initialize components when the A-Frame scene is loaded
+    // Listen for A-Frame scene loaded event
     const scene = document.querySelector('a-scene');
     scene.addEventListener('loaded', function() {
         console.log('A-Frame scene loaded');
         
-        // Initialize components
-        app.init();
-        cameraController.init();
-        
-        // Add objects to window for console debugging
-        window.app = app;
-        window.cameraController = cameraController;
-        window.modelsManager = modelsManager;
+        // Make sure APP was initialized properly
+        if (typeof APP !== 'undefined' && APP.init) {
+            console.log('APP module detected');
+            
+            // Make APP available globally for debugging
+            window.APP = APP;
+            
+            // Initialize APP if it hasn't been already
+            if (!APP.initialized) {
+                console.log('Initializing APP from main.js');
+                APP.initialized = true;
+                APP.init();
+            }
+        } else {
+            console.error('APP module not found or not properly initialized');
+        }
     });
 });

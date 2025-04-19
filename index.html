@@ -655,12 +655,7 @@
             }
         }
         
-        /* VR mode adjustments */
-        .a-enter-vr {
-            position: fixed;
-            bottom: 16px;
-            left: 16px;
-        }
+        
     </style>
 </head>
 
@@ -699,76 +694,9 @@
                 <div class="category-tab" data-tab="decor">Decor</div>
             </div>
             <div class="category-content">
-                <!-- Structures Tab Content -->
-                <div class="subcategory">
-                    <div class="subcategory-title">
-                        <i class="fas fa-wall icon"></i> Walls & Floors
-                    </div>
-                    <div class="items-grid">
-                        <div class="item-card" data-item="wall">
-                            <div class="item-preview">
-                                <i class="fas fa-grip-lines-vertical item-icon"></i>
-                            </div>
-                            <div class="item-label">Wall</div>
-                        </div>
-                        <div class="item-card" data-item="floor">
-                            <div class="item-preview">
-                                <i class="fas fa-square item-icon"></i>
-                            </div>
-                            <div class="item-label">Floor</div>
-                        </div>
-                        <div class="item-card" data-item="window">
-                            <div class="item-preview">
-                                <i class="fas fa-window-maximize item-icon"></i>
-                            </div>
-                            <div class="item-label">Window</div>
-                        </div>
-                        <div class="item-card" data-item="door">
-                            <div class="item-preview">
-                                <i class="fas fa-door-open item-icon"></i>
-                            </div>
-                            <div class="item-label">Door</div>
-                        </div>
-                        <div class="item-card" data-item="roof">
-                            <div class="item-preview">
-                                <i class="fas fa-home item-icon"></i>
-                            </div>
-                            <div class="item-label">Roof</div>
-                        </div>
-                        <div class="item-card" data-item="stairs">
-                            <div class="item-preview">
-                                <i class="fas fa-stairs item-icon"></i>
-                            </div>
-                            <div class="item-label">Stairs</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Room Templates Subcategory -->
-                <div class="subcategory">
-                    <div class="subcategory-title">
-                        <i class="fas fa-th-large icon"></i> Room Templates
-                    </div>
-                    <div class="items-grid">
-                        <div class="item-card" data-item="room-bedroom">
-                            <div class="item-preview">
-                                <i class="fas fa-bed item-icon"></i>
-                            </div>
-                            <div class="item-label">Bedroom</div>
-                        </div>
-                        <div class="item-card" data-item="room-kitchen">
-                            <div class="item-preview">
-                                <i class="fas fa-utensils item-icon"></i>
-                            </div>
-                            <div class="item-label">Kitchen</div>
-                        </div>
-                        <div class="item-card" data-item="room-bathroom">
-                            <div class="item-preview">
-                                <i class="fas fa-bath item-icon"></i>
-                            </div>
-                            <div class="item-label">Bathroom</div>
-                        </div>
-                    </div>
+                <!-- Items will be dynamically added here -->
+                <div id="items-container" class="items-grid">
+                    <!-- Items will be generated here by app.js -->
                 </div>
             </div>
         </div>
@@ -868,7 +796,7 @@
     </div>
 
     <!-- A-Frame Scene -->
-    <a-scene embedded vr-mode-ui="enabled: true">
+    <a-scene embedded vr-mode-ui="enabled: false">
         <!-- Assets -->
         <a-assets>
             <!-- Structure Models -->
@@ -914,7 +842,6 @@
 
             <!--Table Models-->
             <a-asset-item id="sofa_set_2_table" src="assets/models/tables/sofa_set_2_table.glb"></a-asset-item>
-
         </a-assets>
         
         <!-- Environment (simple outdoor scene) -->
