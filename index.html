@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles-fix.css">
     <style>
         :root {
             --primary: #5B8BFF;
@@ -655,6 +656,29 @@
             }
         }
         
+        /* Additional inline fixes */
+        .a-canvas {
+            position: absolute;
+            z-index: 1 !important;
+        }
+        
+        .a-enter-vr {
+            display: none !important;
+        }
+        
+        .ui-container {
+            z-index: 100 !important;
+        }
+        
+        .toolbar, .view-controls {
+            z-index: 999 !important;
+            pointer-events: auto !important;
+        }
+        
+        .btn, .build-btn {
+            z-index: 1000 !important;
+            pointer-events: auto !important;
+        }
         
     </style>
 </head>
@@ -882,6 +906,88 @@
     <script src="js/camera-controller.js"></script>
     <script src="js/collision-manager.js"></script>
     <script src="js/app.js"></script>     
-    <script src="js/main.js"></script>    
+    <script src="js/main.js"></script>
+    
+    <script>
+        // Additional button fix
+        document.addEventListener('DOMContentLoaded', function() {
+          // Wait for A-Frame to initialize
+          setTimeout(() => {
+            console.log("Applying additional button fixes...");
+            
+            // Fix toolbar buttons
+            document.querySelectorAll('.build-btn').forEach(btn => {
+              // Remove any existing event listeners
+              const newBtn = btn.cloneNode(true);
+              btn.parentNode.replaceChild(newBtn, btn);
+              
+              // Add new event listener with capture phase
+              newBtn.addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Button clicked via pointerdown:', this.id);
+                
+                // Get button ID and trigger appropriate function
+                const id = this.id;
+                if (id === 'build-btn') APP.setMode('build');
+                else if (id === 'decorate-btn') APP.setMode('decorate');
+                else if (id === 'edit-btn') APP.setMode('edit');
+                else if (id === 'move-btn') APP.setMode('move');
+                else if (id === 'erase-btn') APP.setMode('erase');
+              }, true);
+            });
+            
+            // Fix view control buttons
+            document.querySelectorAll('.view-controls .btn').forEach(btn => {
+              // Remove any existing event listeners
+              const newBtn = btn.cloneNode(true);
+              btn.parentNode.replaceChild(newBtn, btn);
+              
+              // Add new event listener with capture phase
+              newBtn.addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('View control clicked via pointerdown:', this.id);
+                
+                // Get button ID and trigger appropriate function
+                const id = this.id;
+                if (id === 'view-2d') APP.setView('2d');
+                else if (id === 'view-3d') APP.setView('3d');
+                else if (id === 'zoom-in') CameraController.zoomIn();
+                else if (id === 'zoom-out') CameraController.zoomOut();
+              }, true);
+            });
+            
+            // Disable A-Frame event handling in specific UI areas
+            const aScene = document.querySelector('a-scene');
+            if (aScene && aScene.canvas) {
+              const uiContainer = document.querySelector('.ui-container');
+              
+              uiContainer.addEventListener('mousedown', e => {
+                e.stopPropagation();
+              }, true);
+              
+              uiContainer.addEventListener('touchstart', e => {
+                e.stopPropagation(); 
+              }, true);
+            }
+          }, 1000); // Give more time for A-Frame to initialize
+        });
+        
+        // Add these lines to fix the timestamp issue
+        if (window.console) {
+          const originalLog = console.log;
+          console.log = function(...args) {
+            // Filter out timestamp messages
+            if (args.length > 0 && 
+                typeof args[0] === 'string' && 
+                (args[0].includes('Current Date') || 
+                 args[0].includes('Current User'))) {
+              return; // Don't log these messages
+            }
+            return originalLog.apply(console, args);
+          };
+        }
+      </script>
 </body>
 </html>

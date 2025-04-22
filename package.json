@@ -1,19 +1,12 @@
 {
-  "name": "virtual_house",
+  "name": "visual-house",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "3D home design builder",
+  "main": "server.js",
   "scripts": {
-    "start": "http-server -c-1 --silent"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "aframe": "^1.7.1"
-  },
-  "devDependencies": {
-    "http-server": "^14.1.1"
+    "express": "^4.17.1"
   }
 }

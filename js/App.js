@@ -51,12 +51,14 @@ const APP = {
         this.showNotification('Welcome to EasyFloor! Start by selecting an item from the panel.', 'info');
         
         // Fix button event listeners - critical fix for button functionality
-        document.querySelectorAll('.build-btn, .btn-icon, .category-tab, .item-card').forEach(btn => {
+        const buttonsToFix = document.querySelectorAll('.build-btn, .btn-icon, .category-tab, .item-card');
+        console.log(`Fixing ${buttonsToFix.length} buttons`);
+        buttonsToFix.forEach(btn => {
             btn.addEventListener('click', function(e) {
                 console.log('Button clicked:', this.id || this.className);
                 // Prevent event bubbling to ensure clicks aren't captured by A-Frame
                 e.stopPropagation();
-            });
+            }, true);
         });
         
         // Add error handling for model loading
@@ -90,34 +92,101 @@ const APP = {
         console.log("Setting up event listeners...");
         
         try {
-            // Mode buttons
-            document.getElementById('build-btn').addEventListener('click', () => this.setMode('build'));
-            document.getElementById('decorate-btn').addEventListener('click', () => this.setMode('decorate'));
-            document.querySelector('#edit-btn').addEventListener('click', () => this.setMode('edit'));
-            document.getElementById('move-btn').addEventListener('click', () => this.setMode('move'));
-            document.getElementById('erase-btn').addEventListener('click', () => this.setMode('erase'));
+            // Mode buttons - bottom toolbar
+            const buildBtn = document.getElementById('build-btn');
+            const decorateBtn = document.getElementById('decorate-btn');
+            const editBtn = document.getElementById('edit-btn');
+            const moveBtn = document.getElementById('move-btn');
+            const eraseBtn = document.getElementById('erase-btn');
             
-            // View controls
-            document.getElementById('view-2d').addEventListener('click', () => this.setView('2d'));
-            document.getElementById('view-3d').addEventListener('click', () => this.setView('3d'));
-            document.getElementById('zoom-in').addEventListener('click', () => CameraController.zoomIn());
-            document.getElementById('zoom-out').addEventListener('click', () => CameraController.zoomOut());
+            if (buildBtn) buildBtn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                e.preventDefault();
+                this.setMode('build'); 
+                console.log('Build button clicked');
+            }, true);
+            
+            if (decorateBtn) decorateBtn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                e.preventDefault();
+                this.setMode('decorate'); 
+                console.log('Decorate button clicked');
+            }, true);
+            
+            if (editBtn) editBtn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                e.preventDefault();
+                this.setMode('edit'); 
+                console.log('Edit button clicked');
+            }, true);
+            
+            if (moveBtn) moveBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault(); 
+                this.setMode('move');
+                console.log('Move button clicked'); 
+            }, true);
+            
+            if (eraseBtn) eraseBtn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                e.preventDefault();
+                this.setMode('erase'); 
+                console.log('Erase button clicked');
+            }, true);
+            
+            // View controls - right sidebar
+            const view2dBtn = document.getElementById('view-2d');
+            const view3dBtn = document.getElementById('view-3d');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            
+            if (view2dBtn) view2dBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.setView('2d'); 
+                console.log('2D view button clicked');
+            }, true);
+            
+            if (view3dBtn) view3dBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.setView('3d'); 
+                console.log('3D view button clicked');
+            }, true);
+            
+            if (zoomInBtn) zoomInBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                CameraController.zoomIn(); 
+                console.log('Zoom in button clicked');
+            }, true);
+            
+            if (zoomOutBtn) zoomOutBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                CameraController.zoomOut(); 
+                console.log('Zoom out button clicked');
+            }, true);
             
             // Category tabs
             document.querySelectorAll('.category-tab').forEach(tab => {
                 tab.addEventListener('click', (e) => {
-                    document.querySelectorAll('.category-tab').forEach(tab => tab.classList.remove('active'));
+                    e.stopPropagation();
+                    e.preventDefault();
+                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
                     e.target.classList.add('active');
                     
                     const tabName = e.target.dataset.tab;
                     this.debug(`Selected tab: ${tabName}`);
                     this.switchCategoryContent(tabName);
-                });
+                }, true);
             });
             
             // Item selection - initial attachment
             document.querySelectorAll('.item-card').forEach(item => {
                 item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
                     const itemCard = e.target.closest('.item-card');
                     document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
                     itemCard.classList.add('active');
@@ -125,41 +194,108 @@ const APP = {
                     this.selectedItem = itemCard.dataset.item;
                     this.prepareObjectPlacement(this.selectedItem);
                     this.debug(`Selected item: ${this.selectedItem}`);
-                });
+                }, true);
             });
             
             // Placement controls
-            document.getElementById('place-cancel').addEventListener('click', () => this.cancelPlacement());
-            document.getElementById('place-rotate').addEventListener('click', () => this.rotateObject());
-            document.getElementById('place-confirm').addEventListener('click', () => this.confirmPlacement());
+            const placeCancelBtn = document.getElementById('place-cancel');
+            const placeRotateBtn = document.getElementById('place-rotate');
+            const placeConfirmBtn = document.getElementById('place-confirm');
+            
+            if (placeCancelBtn) placeCancelBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.cancelPlacement(); 
+            }, true);
+            
+            if (placeRotateBtn) placeRotateBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.rotateObject(); 
+            }, true);
+            
+            if (placeConfirmBtn) placeConfirmBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.confirmPlacement(); 
+            }, true);
             
             // Save/load/export buttons
-            document.getElementById('save-btn').addEventListener('click', () => this.saveDesign());
-            document.getElementById('load-btn').addEventListener('click', () => this.loadDesign());
-            document.getElementById('export-btn').addEventListener('click', () => this.exportDesign());
+            const saveBtn = document.getElementById('save-btn');
+            const loadBtn = document.getElementById('load-btn');
+            const exportBtn = document.getElementById('export-btn');
+            
+            if (saveBtn) saveBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.saveDesign(); 
+            }, true);
+            
+            if (loadBtn) loadBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.loadDesign(); 
+            }, true);
+            
+            if (exportBtn) exportBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.exportDesign(); 
+            }, true);
             
             // Properties panel close button
-            document.getElementById('properties-close').addEventListener('click', () => {
-                document.getElementById('properties-panel').style.display = 'none';
-            });
+            const propertiesCloseBtn = document.getElementById('properties-close');
+            if (propertiesCloseBtn) {
+                propertiesCloseBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    document.getElementById('properties-panel').style.display = 'none';
+                }, true);
+            }
             
             // A-Frame scene events for mouse interaction
             const scene = document.querySelector('a-scene');
             
-            scene.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-            scene.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-            scene.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+            if (scene) {
+                scene.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                scene.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                scene.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                
+                // Touch events for mobile
+                scene.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+                scene.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+                scene.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+            }
             
-            // Touch events for mobile
-            scene.addEventListener('touchstart', (e) => this.handleTouchStart(e));
-            scene.addEventListener('touchmove', (e) => this.handleTouchMove(e));
-            scene.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+            // Object menu event listeners - context menu buttons
+            const contextEditBtn = document.querySelector('#object-menu #edit-btn');
+            const rotateBtn = document.getElementById('rotate-btn');
+            const duplicateBtn = document.getElementById('duplicate-btn');
+            const deleteBtn = document.getElementById('delete-btn');
             
-            // Object menu event listeners
-            document.querySelector('#edit-btn').addEventListener('click', () => this.editSelectedObject());
-            document.getElementById('rotate-btn').addEventListener('click', () => this.rotateSelectedObject());
-            document.getElementById('duplicate-btn').addEventListener('click', () => this.duplicateSelectedObject());
-            document.getElementById('delete-btn').addEventListener('click', () => this.deleteSelectedObject());
+            if (contextEditBtn) contextEditBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.editSelectedObject(); 
+            }, true);
+            
+            if (rotateBtn) rotateBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.rotateSelectedObject(); 
+            }, true);
+            
+            if (duplicateBtn) duplicateBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.duplicateSelectedObject(); 
+            }, true);
+            
+            if (deleteBtn) deleteBtn.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                e.preventDefault();
+                this.deleteSelectedObject(); 
+            }, true);
             
             // Context menu for objects
             document.addEventListener('contextmenu', (e) => {
@@ -196,6 +332,20 @@ const APP = {
                 }
             });
             
+            // Block all UI container interactions from reaching A-Frame
+            const uiContainer = document.querySelector('.ui-container');
+            if (uiContainer) {
+                ['click', 'mousedown', 'touchstart', 'pointerdown'].forEach(eventType => {
+                    uiContainer.addEventListener(eventType, (e) => {
+                        if (e.target.closest('.btn') || e.target.closest('.build-btn') || 
+                            e.target.closest('.category-tab') || e.target.closest('.item-card')) {
+                            e.stopPropagation();
+                            console.log(`Stopped ${eventType} propagation for:`, e.target);
+                        }
+                    }, true);
+                });
+            }
+            
             console.log("Event listeners setup completed!");
         } catch (error) {
             console.error("Error setting up event listeners:", error);
@@ -230,17 +380,18 @@ const APP = {
         // Reattach event listeners to new cards
         document.querySelectorAll('.item-card').forEach(item => {
             item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 const itemCard = e.target.closest('.item-card');
                 document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
                 itemCard.classList.add('active');
                 
                 this.selectedItem = itemCard.dataset.item;
                 this.prepareObjectPlacement(this.selectedItem);
-            });
+            }, true);
         });
     },
     
-    // Create an item card for the UI
     createItemCard(key, model) {
         const card = document.createElement('div');
         card.className = 'item-card';
