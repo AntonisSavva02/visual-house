@@ -135,10 +135,15 @@ const CollisionManager = {
     
     init() {
         // Initialize collision manager
-        // This could load custom rules or prepare data structures
+        console.log("Initializing CollisionManager...");
+        // Nothing to do here for now, but might be useful in the future
     },
     
     checkPlacement(boundingBox, objectType, excludeElement, objects) {
+        if (!objects || !boundingBox || !objectType) {
+            return true; // If any parameter is missing, allow placement by default
+        }
+        
         // Get placement rules for this object type
         const rules = this.placementRules[objectType] || this.placementRules.default;
         
@@ -232,11 +237,15 @@ const CollisionManager = {
     
     getObjectBoundingBox(obj) {
         const position = obj.position;
+        if (!position) return null;
+        
         const rotation = obj.rotation;
         const type = obj.type;
         
         // Get object dimensions from model data
         const objectData = MODELS[type];
+        if (!objectData) return null;
+        
         const boundingBox = objectData.boundingBox || { width: 1, height: 1, depth: 1 };
         
         // Create the bounding box
@@ -261,6 +270,8 @@ const CollisionManager = {
     },
     
     checkBoxOverlap(boxA, boxB) {
+        if (!boxA || !boxB) return false;
+        
         // Check if two axis-aligned bounding boxes overlap
         return (
             boxA.min.x <= boxB.max.x &&

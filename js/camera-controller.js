@@ -23,8 +23,15 @@ const CameraController = {
     
     // Initialize the camera controller
     init() {
+        console.log("Initializing CameraController...");
+        
         this.camera = document.getElementById('camera');
         this.cameraRig = document.getElementById('camera-rig');
+        
+        if (!this.camera || !this.cameraRig) {
+            console.error("Camera or camera rig not found!");
+            return;
+        }
         
         // Set initial position
         this.set3DView();
@@ -36,6 +43,7 @@ const CameraController = {
     setupEventListeners() {
         // Mouse controls for panning and rotating
         const scene = document.querySelector('a-scene');
+        if (!scene) return;
         
         scene.addEventListener('mousedown', (e) => {
             // Only handle middle mouse button or right button while holding shift
@@ -149,6 +157,8 @@ const CameraController = {
     set2DView() {
         this.view = '2d';
         
+        if (!this.cameraRig) return;
+        
         // Position camera above the scene, looking down
         const currentPos = this.cameraRig.getAttribute('position');
         
@@ -165,11 +175,15 @@ const CameraController = {
         });
         
         // Disable rotation in 2D view
-        this.camera.setAttribute('look-controls', 'enabled', false);
+        if (this.camera) {
+            this.camera.setAttribute('look-controls', 'enabled', false);
+        }
     },
     
     set3DView() {
         this.view = '3d';
+        
+        if (!this.cameraRig) return;
         
         // Position camera at an isometric angle
         const currentPos = this.cameraRig.getAttribute('position');
@@ -187,10 +201,14 @@ const CameraController = {
         });
         
         // Enable rotation in 3D view
-        this.camera.setAttribute('look-controls', 'enabled', true);
+        if (this.camera) {
+            this.camera.setAttribute('look-controls', 'enabled', true);
+        }
     },
     
     panCamera(deltaX, deltaY) {
+        if (!this.cameraRig) return;
+        
         const currentPos = this.cameraRig.getAttribute('position');
         const currentRot = this.cameraRig.getAttribute('rotation');
         
@@ -211,7 +229,7 @@ const CameraController = {
     },
     
     rotateCamera(deltaX, deltaY) {
-        if (this.view !== '3d') return;
+        if (this.view !== '3d' || !this.cameraRig) return;
         
         const currentRot = this.cameraRig.getAttribute('rotation');
         
@@ -224,6 +242,8 @@ const CameraController = {
     },
     
     zoomIn() {
+        if (!this.cameraRig) return;
+        
         const currentPos = this.cameraRig.getAttribute('position');
         const currentRot = this.cameraRig.getAttribute('rotation');
         
@@ -255,6 +275,8 @@ const CameraController = {
     },
     
     zoomOut() {
+        if (!this.cameraRig) return;
+        
         const currentPos = this.cameraRig.getAttribute('position');
         const currentRot = this.cameraRig.getAttribute('rotation');
         
