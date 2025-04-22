@@ -56,8 +56,8 @@ a-scene {
 
 /* Make UI elements more prominent */
 .ui-container {
-  pointer-events: none;
-  z-index: 100 !important;
+  pointer-events: auto !important;
+  z-index: 1000 !important;
 }
 
 /* Improve button visibility */

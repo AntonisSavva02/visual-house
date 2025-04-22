@@ -50,16 +50,36 @@ const APP = {
         // Show notification
         this.showNotification('Welcome to EasyFloor! Start by selecting an item from the panel.', 'info');
         
-        // Fix button event listeners - critical fix for button functionality
-        const buttonsToFix = document.querySelectorAll('.build-btn, .btn-icon, .category-tab, .item-card');
-        console.log(`Fixing ${buttonsToFix.length} buttons`);
-        buttonsToFix.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                console.log('Button clicked:', this.id || this.className);
-                // Prevent event bubbling to ensure clicks aren't captured by A-Frame
+        // Initialize button event listeners
+        const initializeButtons = () => {
+            const buttons = document.querySelectorAll('.build-btn, .btn-icon, .category-tab, .item-card');
+            buttons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-            }, true);
-        });
+                const id = btn.id || btn.className;
+                console.log(`Button clicked: ${id}`);
+                switch (id) {
+                case 'build-btn':
+                    APP.setMode('build');
+                    break;
+                case 'decorate-btn':
+                    APP.setMode('decorate');
+                    break;
+                case 'edit-btn':
+                    APP.setMode('edit');
+                    break;
+                case 'move-btn':
+                    APP.setMode('move');
+                    break;
+                case 'erase-btn':
+                    APP.setMode('erase');
+                    break;
+                default:
+                    console.warn('Unhandled button:', id);
+                }
+            });
+            });
+        };
         
         // Add error handling for model loading
         document.addEventListener('model-error', function(e) {

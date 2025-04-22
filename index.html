@@ -909,69 +909,11 @@
     <script src="js/main.js"></script>
     
     <script>
-        // Additional button fix
-        document.addEventListener('DOMContentLoaded', function() {
-          // Wait for A-Frame to initialize
-          setTimeout(() => {
-            console.log("Applying additional button fixes...");
-            
-            // Fix toolbar buttons
-            document.querySelectorAll('.build-btn').forEach(btn => {
-              // Remove any existing event listeners
-              const newBtn = btn.cloneNode(true);
-              btn.parentNode.replaceChild(newBtn, btn);
-              
-              // Add new event listener with capture phase
-              newBtn.addEventListener('pointerdown', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Button clicked via pointerdown:', this.id);
-                
-                // Get button ID and trigger appropriate function
-                const id = this.id;
-                if (id === 'build-btn') APP.setMode('build');
-                else if (id === 'decorate-btn') APP.setMode('decorate');
-                else if (id === 'edit-btn') APP.setMode('edit');
-                else if (id === 'move-btn') APP.setMode('move');
-                else if (id === 'erase-btn') APP.setMode('erase');
-              }, true);
-            });
-            
-            // Fix view control buttons
-            document.querySelectorAll('.view-controls .btn').forEach(btn => {
-              // Remove any existing event listeners
-              const newBtn = btn.cloneNode(true);
-              btn.parentNode.replaceChild(newBtn, btn);
-              
-              // Add new event listener with capture phase
-              newBtn.addEventListener('pointerdown', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('View control clicked via pointerdown:', this.id);
-                
-                // Get button ID and trigger appropriate function
-                const id = this.id;
-                if (id === 'view-2d') APP.setView('2d');
-                else if (id === 'view-3d') APP.setView('3d');
-                else if (id === 'zoom-in') CameraController.zoomIn();
-                else if (id === 'zoom-out') CameraController.zoomOut();
-              }, true);
-            });
-            
-            // Disable A-Frame event handling in specific UI areas
-            const aScene = document.querySelector('a-scene');
-            if (aScene && aScene.canvas) {
-              const uiContainer = document.querySelector('.ui-container');
-              
-              uiContainer.addEventListener('mousedown', e => {
-                e.stopPropagation();
-              }, true);
-              
-              uiContainer.addEventListener('touchstart', e => {
-                e.stopPropagation(); 
-              }, true);
-            }
-          }, 1000); // Give more time for A-Frame to initialize
+        
+        // Add new event listener with capture phase
+        document.addEventListener('DOMContentLoaded', function () {
+        // Delegate all initialization to App.js
+        console.log("Delegating initialization to App.js...");
         });
         
         // Add these lines to fix the timestamp issue
