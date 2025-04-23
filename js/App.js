@@ -1,7 +1,7 @@
 /**
  * Visual-House - Interactive Home Design Tool
  * Main application controller
- * Last updated: 2025-04-23
+ * Last updated: 2025-04-23 10:16:13
  * Developer: AntonisSavva02
  */
 
@@ -1150,3 +1150,199 @@ const APP = {
         }, 3000);
     }
 };
+
+// Camera controller component
+APP.Camera = {
+    // Camera settings
+    currentView: '2d',
+    zoomLevel: 15,
+    minZoom: 5,
+    maxZoom: 30,
+    
+    // Init function
+    init: function(app) {
+        this.app = app;
+        
+        // Set initial camera position
+        this.set2DView();
+    },
+    
+    // Set 2D top-down view
+    set2DView: function() {
+        this.currentView = '2d';
+        
+        // Rotate camera to look down
+        this.app.cameraRig.setAttribute('rotation', '-90 0 0');
+        
+        // Position camera above the scene
+        this.app.cameraRig.setAttribute('position', `0 ${this.zoomLevel} 0`);
+        
+        // Disable look controls
+        this.app.camera.setAttribute('look-controls', 'enabled: false');
+    },
+    
+    // Set 3D perspective view
+    set3DView: function() {
+        this.currentView = '3d';
+        
+        // Set perspective angle
+        this.app.cameraRig.setAttribute('rotation', '-45 0 0');
+        
+        // Position camera at an angle
+        const distance = this.zoomLevel / 2;
+        this.app.cameraRig.setAttribute('position', `0 ${distance} ${distance}`);
+        
+        // Enable look controls
+        this.app.camera.setAttribute('look-controls', 'enabled: true');
+    },
+    
+    // Zoom in camera
+    zoomIn: function() {
+        if (this.zoomLevel <= this.minZoom) return;
+        
+        this.zoomLevel -= 1;
+        this.updateCameraPosition();
+    },
+    
+    // Zoom out camera
+    zoomOut: function() {
+        if (this.zoomLevel >= this.maxZoom) return;
+        
+        this.zoomLevel += 1;
+        this.updateCameraPosition();
+    },
+    
+    // Update camera position based on view mode and zoom level
+    updateCameraPosition: function() {
+        if (this.currentView === '2d') {
+            this.app.cameraRig.setAttribute('position', `0 ${this.zoomLevel} 0`);
+        } else {
+            const distance = this.zoomLevel / 2;
+            this.app.cameraRig.setAttribute('position', `0 ${distance} ${distance}`);
+        }
+    },
+    
+    // Get intersection with the ground plane
+    getGroundIntersection: function(event) {
+        // Use the cursor's raycaster component
+        const cursor = this.app.camera.querySelector('[raycaster]');
+        if (!cursor) return null;
+        
+        // Get all intersections
+        const raycaster = cursor.components.raycaster;
+        const intersections = raycaster.intersections;
+        
+        // Find intersection with the ground or grid
+        for (let i = 0; i < intersections.length; i++) {
+            const el = intersections[i].object.el;
+            if (el && (el.id === 'ground' || el.closest('#ground'))) {
+                return intersections[i];
+            }
+        }
+        
+        return null;
+    },
+    
+    // Convert 3D world position to screen position
+    worldToScreen: function(worldPosition) {
+        // Create temporary vector for world position
+        const tempVector = new THREE.Vector3(
+            worldPosition.x,
+            worldPosition.y,
+            worldPosition.z
+        );
+        
+        // Get camera and renderer
+        const camera = this.app.camera.getObject3D('camera');
+        const renderer = this.app.camera.sceneEl.renderer;
+        
+        // Project position to screen
+        tempVector.project(camera);
+        
+        // Calculate screen coordinates
+        const widthHalf = renderer.domElement.width / 2;
+        const heightHalf = renderer.domElement.height / 2;
+        
+        const screenPosition = {
+            x: (tempVector.x * widthHalf) + widthHalf,
+            y: -(tempVector.y * heightHalf) + heightHalf
+        };
+        
+        return screenPosition;
+    }
+};
+
+// Collision detection system
+APP.Collision = {
+    // Init function
+    init: function(app) {
+        this.app = app;
+    },
+    
+    // Check if a bounding box placement is valid
+    checkPlacement: function(boundingBox, excludeObject) {
+        const objects = this.app.houseContainer.querySelectorAll('.collidable');
+        
+        // Check each object in the scene
+        for (let i = 0; i < objects.length; i++) {
+            const object = objects[i];
+            
+            // Skip the object being moved
+            if (excludeObject && object === excludeObject) continue;
+            
+            // Skip invisible objects
+            if (object.getAttribute('visible') === false) continue;
+            
+            // Get object position, rotation, and size
+            const position = object.getAttribute('position');
+            const objectType = object.getAttribute('data-object-type');
+            
+            // Skip if not a valid object
+            if (!objectType || !MODELS[objectType]) continue;
+            
+            const modelData = MODELS[objectType];
+            
+            // Calculate object's bounding box
+            const objectBox = {
+                min: {
+                    x: position.x - modelData.boundingBox.width / 2,
+                    y: position.y - modelData.boundingBox.height / 2,
+                    z: position.z - modelData.boundingBox.depth / 2
+                },
+                max: {
+                    x: position.x + modelData.boundingBox.width / 2,
+                    y: position.y + modelData.boundingBox.height / 2,
+                    z: position.z + modelData.boundingBox.depth / 2
+                }
+            };
+            
+            // Check for intersection
+            if (this.checkBoxIntersection(boundingBox, objectBox)) {
+                return false;
+            }
+        }
+        
+        // No collisions found
+        return true;
+    },
+    
+    // Check if two bounding boxes intersect
+    checkBoxIntersection: function(box1, box2) {
+        return (box1.min.x <= box2.max.x && box1.max.x >= box2.min.x) &&
+               (box1.min.y <= box2.max.y && box1.max.y >= box2.min.y) &&
+               (box1.min.z <= box2.max.z && box1.max.z >= box2.min.z);
+    }
+};
+
+// Initialize the application when A-Frame is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for A-Frame to be fully loaded
+    const scene = document.querySelector('a-scene');
+    if (scene.hasLoaded) {
+        APP.init();
+    } else {
+        scene.addEventListener('loaded', function() {
+            APP.init();
+        });
+    }
+});

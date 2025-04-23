@@ -915,7 +915,7 @@
     <script src="js/main.js"></script>
     
     <!-- Model visibility debug script - Add before closing </body> tag -->
-    <!-- Last updated: 2025-04-23 by AntonisSavva02 -->
+    <!-- Last updated: 2025-04-23 10:22:38 by AntonisSavva02 -->
     <script>
         // Add visual debug indicator for model visibility
         document.addEventListener('DOMContentLoaded', function() {
@@ -1066,6 +1066,222 @@
                     }, 2000); // Check every 2 seconds
                 });
             }
+        });
+    </script>
+    
+    <!-- Texture finder script - helps locate textures in the repository -->
+    <!-- Last updated: 2025-04-23 10:22:38 by AntonisSavva02 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create a texture finder button
+            const textureFinderBtn = document.createElement('button');
+            textureFinderBtn.innerText = 'Find Textures';
+            textureFinderBtn.style.position = 'fixed';
+            textureFinderBtn.style.bottom = '190px';
+            textureFinderBtn.style.left = '10px';
+            textureFinderBtn.style.padding = '8px 12px';
+            textureFinderBtn.style.backgroundColor = '#19EFAA';
+            textureFinderBtn.style.color = '#2C384A';
+            textureFinderBtn.style.border = 'none';
+            textureFinderBtn.style.borderRadius = '5px';
+            textureFinderBtn.style.cursor = 'pointer';
+            textureFinderBtn.style.zIndex = '9999';
+            
+            // Function to check if an image exists
+            function checkImageExists(url, callback) {
+                const img = new Image();
+                img.onload = function() { callback(true); };
+                img.onerror = function() { callback(false); };
+                img.src = url;
+            }
+            
+            // Texture finder function
+            function findTexturesInRepository() {
+                // Common texture paths to try
+                const basePaths = [
+                    "assets/models/walls/textures/",
+                    "assets/models/floors/textures/",
+                    "assets/models/roofs/textures/",
+                    "assets/models/bathroom/textures/",
+                    "assets/models/bedroom/textures/",
+                    "assets/models/sofa/textures/",
+                    "assets/models/tables/textures/",
+                    "assets/models/carpets/textures/",
+                    "assets/textures/"
+                ];
+                
+                // Common texture filenames
+                const textureNames = [
+                    "texture", "diffuse", "color", "albedo", "material",
+                    "wall", "floor", "wood", "brick", "concrete", "plaster",
+                    "tile", "carpet", "fabric", "leather", "default"
+                ];
+                
+                // Extensions to try
+                const extensions = [".jpg", ".png", ".jpeg", ".webp"];
+                
+                // Create results container
+                const resultsDiv = document.createElement('div');
+                resultsDiv.style.position = 'fixed';
+                resultsDiv.style.top = '80px';
+                resultsDiv.style.right = '16px';
+                resultsDiv.style.width = '300px';
+                resultsDiv.style.maxHeight = '400px';
+                resultsDiv.style.overflowY = 'auto';
+                resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                resultsDiv.style.color = 'white';
+                resultsDiv.style.padding = '16px';
+                resultsDiv.style.borderRadius = '8px';
+                resultsDiv.style.zIndex = '9999';
+                resultsDiv.style.fontFamily = 'monospace';
+                resultsDiv.style.fontSize = '12px';
+                resultsDiv.innerHTML = '<h3 style="margin-top:0">Texture Search Results</h3><p>Searching for texture files...</p>';
+                document.body.appendChild(resultsDiv);
+                
+                // Counter for found textures
+                let foundTextures = 0;
+                let checkedPaths = 0;
+                const totalPaths = basePaths.length * textureNames.length * extensions.length;
+                
+                // Update progress function
+                function updateProgress() {
+                    const percentComplete = Math.floor((checkedPaths / totalPaths) * 100);
+                    resultsDiv.innerHTML = `
+                        <h3 style="margin-top:0">Texture Search Results</h3>
+                        <p>Checking texture paths: ${percentComplete}% complete</p>
+                        <p>Found textures: ${foundTextures}</p>
+                        <div id="found-textures-list"></div>
+                    `;
+                }
+                
+                // Initial progress update
+                updateProgress();
+                
+                // Start checking paths
+                basePaths.forEach(basePath => {
+                    textureNames.forEach(textureName => {
+                        extensions.forEach(extension => {
+                            const fullPath = basePath + textureName + extension;
+                            
+                            checkImageExists(fullPath, function(exists) {
+                                checkedPaths++;
+                                
+                                if (exists) {
+                                    foundTextures++;
+                                    console.log(`%c✓ Texture found: ${fullPath}`, 'color: green; font-weight: bold');
+                                    
+                                    // Add to the results list
+                                    const foundList = document.getElementById('found-textures-list');
+                                    if (foundList) {
+                                        const textureItem = document.createElement('div');
+                                        textureItem.style.marginBottom = '8px';
+                                        textureItem.innerHTML = `
+                                            <div style="color:#19EFAA">✓ ${fullPath}</div>
+                                            <img src="${fullPath}" style="max-width:100%; max-height:60px; margin-top:4px; border:1px solid #555">
+                                        `;
+                                        foundList.appendChild(textureItem);
+                                    }
+                                }
+                                
+                                // Update progress
+                                updateProgress();
+                                
+                                // If we're done, show a close button
+                                if (checkedPaths === totalPaths) {
+                                    const closeButton = document.createElement('button');
+                                    closeButton.innerText = 'Close';
+                                    closeButton.style.backgroundColor = '#FF7367';
+                                    closeButton.style.color = 'white';
+                                    closeButton.style.border = 'none';
+                                    closeButton.style.borderRadius = '4px';
+                                    closeButton.style.padding = '6px 12px';
+                                    closeButton.style.marginTop = '16px';
+                                    closeButton.style.cursor = 'pointer';
+                                    
+                                    closeButton.addEventListener('click', function() {
+                                        document.body.removeChild(resultsDiv);
+                                    });
+                                    
+                                    resultsDiv.appendChild(closeButton);
+                                    
+                                    // Final result message
+                                    if (foundTextures === 0) {
+                                        resultsDiv.innerHTML += `
+                                            <p style="color:#FF7367">No textures found in standard locations.</p>
+                                            <p>Please check that your texture files exist and are correctly named.</p>
+                                        `;
+                                    } else {
+                                        resultsDiv.innerHTML += `
+                                            <p style="color:#19EFAA">Found ${foundTextures} textures that can be used.</p>
+                                        `;
+                                    }
+                                }
+                            });
+                        });
+                    });
+                });
+            }
+            
+            // Add click handler for texture finder button
+            textureFinderBtn.addEventListener('click', findTexturesInRepository);
+            document.body.appendChild(textureFinderBtn);
+            
+            // Create a texture reload button
+            const textureReloadBtn = document.createElement('button');
+            textureReloadBtn.innerText = 'Reload Textures';
+            textureReloadBtn.style.position = 'fixed';
+            textureReloadBtn.style.bottom = '230px';
+            textureReloadBtn.style.left = '10px';
+            textureReloadBtn.style.padding = '8px 12px';
+            textureReloadBtn.style.backgroundColor = '#5B8BFF';
+            textureReloadBtn.style.color = 'white';
+            textureReloadBtn.style.border = 'none';
+            textureReloadBtn.style.borderRadius = '5px';
+            textureReloadBtn.style.cursor = 'pointer';
+            textureReloadBtn.style.zIndex = '9999';
+            
+            textureReloadBtn.addEventListener('click', function() {
+                // Find all objects in house container
+                const houseElements = document.querySelectorAll('[gltf-model]');
+                console.log('Forcing texture reload on', houseElements.length, 'objects');
+                
+                houseElements.forEach(function(element) {
+                    // Get object type
+                    const objectType = element.getAttribute('data-object-type');
+                    if (!objectType) return;
+                    
+                    // Create a fresh model-handler component
+                    const oldHandler = element.getAttribute('model-handler');
+                    if (oldHandler) {
+                        element.removeAttribute('model-handler');
+                        
+                        // Reapply with new values
+                        setTimeout(() => {
+                            element.setAttribute('model-handler', {
+                                modelSrc: element.getAttribute('gltf-model'),
+                                defaultColor: MODELS[objectType]?.materials[0] || '#FF5555',
+                                modelName: objectType,
+                                category: MODELS[objectType]?.category || ''
+                            });
+                        }, 100);
+                    }
+                });
+                
+                // Show success message
+                const notification = document.getElementById('notification');
+                const textElement = document.getElementById('notification-text');
+                if (notification && textElement) {
+                    textElement.textContent = 'Reloading textures on all objects';
+                    notification.className = 'notification success';
+                    notification.classList.add('show');
+                    
+                    setTimeout(() => {
+                        notification.classList.remove('show');
+                    }, 3000);
+                }
+            });
+            
+            document.body.appendChild(textureReloadBtn);
         });
     </script>
     

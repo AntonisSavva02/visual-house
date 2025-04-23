@@ -1,8 +1,8 @@
 /**
  * Visual-House - Model Helper
  * Handles model loading, textures, and visibility issues
- * Last updated: 2025-04-23
- * Developer: AntonisSavva02
+ * Last updated: 2025-04-23 12:58:59
+ * Developer: AntonisSavva02ok
  */
 
 const ModelHelper = {
@@ -12,10 +12,13 @@ const ModelHelper = {
         this.registerModelLoaderComponent();
         this.registerEmergencyFixComponent();
         
-        console.log('Model Helper initialized with emergency visibility fixes');
+        console.log('Model Helper initialized with enhanced visibility fixes');
         
         // Apply global fixes immediately
         this.applyGlobalFixes();
+        
+        // Setup periodic texture checking
+        this.setupTextureWatchdog();
     },
     
     // Apply global fixes to A-Frame rendering
@@ -28,9 +31,17 @@ const ModelHelper = {
                 
                 // Force all materials to be visible
                 if (mesh && mesh.material) {
-                    mesh.material.transparent = false;
-                    mesh.material.opacity = 1;
-                    mesh.material.needsUpdate = true;
+                    if (Array.isArray(mesh.material)) {
+                        mesh.material.forEach(mat => {
+                            mat.transparent = false;
+                            mat.opacity = 1;
+                            mat.needsUpdate = true;
+                        });
+                    } else {
+                        mesh.material.transparent = false;
+                        mesh.material.opacity = 1;
+                        mesh.material.needsUpdate = true;
+                    }
                     mesh.visible = true;
                 }
                 
@@ -59,6 +70,38 @@ const ModelHelper = {
         }
     },
     
+    // Setup a watchdog to periodically check for and fix texture issues
+    setupTextureWatchdog: function() {
+        setInterval(() => {
+            const models = document.querySelectorAll('[gltf-model]');
+            
+            models.forEach(model => {
+                if (model.object3D && model.object3D.visible === false) {
+                    console.log('Fixing invisible model:', model);
+                    model.object3D.visible = true;
+                    
+                    // Force deep visibility
+                    model.object3D.traverse(node => {
+                        node.visible = true;
+                        if (node.isMesh && node.material) {
+                            if (Array.isArray(node.material)) {
+                                node.material.forEach(mat => {
+                                    mat.transparent = false;
+                                    mat.opacity = 1;
+                                    mat.needsUpdate = true;
+                                });
+                            } else {
+                                node.material.transparent = false;
+                                node.material.opacity = 1;
+                                node.material.needsUpdate = true;
+                            }
+                        }
+                    });
+                }
+            });
+        }, 10000); // Check every 10 seconds
+    },
+    
     // Register a component to fix emergency visibility issues
     registerEmergencyFixComponent: function() {
         if (typeof AFRAME === 'undefined') {
@@ -79,46 +122,43 @@ const ModelHelper = {
                     models.forEach(model => {
                         // Force model to be visible
                         model.setAttribute('visible', true);
-                        model.object3D.visible = true;
+                        if (model.object3D) {
+                            model.object3D.visible = true;
                         
-                        // Force re-render by toggling model
-                        const currentSrc = model.getAttribute('gltf-model');
-                        if (currentSrc) {
-                            // Add dummy parameter to force refresh
-                            model.setAttribute('gltf-model', currentSrc + '?fix=' + Date.now());
-                            
-                            // Apply default material
-                            setTimeout(() => {
-                                // Get the model's mesh
-                                if (model.object3D) {
-                                    model.object3D.traverse(node => {
-                                        if (node.isMesh) {
-                                            console.log('Applying emergency material to mesh');
-                                            node.material = new THREE.MeshStandardMaterial({
-                                                color: 0xFF5555,
-                                                metalness: 0.2,
-                                                roughness: 0.8,
-                                                emissive: 0xFF5555,
-                                                emissiveIntensity: 0.3
-                                            });
-                                            node.visible = true;
-                                        }
-                                    });
-                                }
+                            // Force re-render by toggling model
+                            const currentSrc = model.getAttribute('gltf-model');
+                            if (currentSrc) {
+                                // Add dummy parameter to force refresh
+                                model.setAttribute('gltf-model', currentSrc + '?fix=' + Date.now());
                                 
-                                model.setAttribute('visible', true);
-                            }, 100);
+                                // Apply default material
+                                setTimeout(() => {
+                                    // Get the model's mesh
+                                    if (model.object3D) {
+                                        model.object3D.traverse(node => {
+                                            if (node.isMesh) {
+                                                // Only apply emergency material if no texture is present
+                                                if (!node.material || !node.material.map) {
+                                                    console.log('Applying emergency material to mesh');
+                                                    node.material = new THREE.MeshStandardMaterial({
+                                                        color: 0xFF5555,
+                                                        metalness: 0.2,
+                                                        roughness: 0.8,
+                                                        emissive: 0xFF5555,
+                                                        emissiveIntensity: 0.3
+                                                    });
+                                                }
+                                                node.visible = true;
+                                            }
+                                        });
+                                    }
+                                    
+                                    model.setAttribute('visible', true);
+                                }, 100);
+                            }
                         }
                     });
                 }, 5000); // Every 5 seconds
-                
-                // Create a box to confirm rendering is working
-                const testBox = document.createElement('a-box');
-                testBox.setAttribute('position', '0 2 0');
-                testBox.setAttribute('color', 'red');
-                testBox.setAttribute('scale', '0.5 0.5 0.5');
-                document.querySelector('a-scene').appendChild(testBox);
-                console.log('Created test box to verify rendering');
             },
             
             remove: function() {
@@ -199,6 +239,7 @@ const ModelHelper = {
                 
                 // Force visibility update
                 this.el.setAttribute('visible', true);
+                model.visible = true;
                 
                 // Emit custom event that model is ready
                 this.el.emit('model-ready', {model: model}, false);
@@ -231,8 +272,12 @@ const ModelHelper = {
                 
                 // Load the texture
                 const loader = new THREE.TextureLoader();
+                
+                // Add cache-busting parameter to URL
+                const cacheBust = `?cb=${Date.now()}`;
+                
                 loader.load(
-                    texturePath,
+                    texturePath + cacheBust,
                     // Texture loaded successfully
                     (texture) => {
                         console.log(`Texture loaded: ${texturePath}`);
@@ -268,38 +313,75 @@ const ModelHelper = {
             
             findTexturePaths: function() {
                 const textures = [];
+                const category = this.data.category;
                 
-                // Don't try to load textures if no model name or category
-                if (!this.data.modelName || !this.data.category) {
+                // Don't try to load textures if no category
+                if (!category) {
                     return textures;
                 }
                 
-                // Map to likely texture paths based on category and model name
-                const simplifiedName = this.data.modelName.replace(/[_-]/g, '');
-                const basePath = `assets/textures/${this.data.category}/`;
+                // Wall textures - using actual file paths we found in the repository
+                if (category === 'walls') {
+                    textures.push('assets/models/walls/textures/01_-_Plaster003_0_baseColor.jpeg');
+                    textures.push('assets/models/walls/textures/01_-_Plaster003_baseColor.jpeg');
+                    textures.push('assets/models/walls/textures/02_-_Wood006_baseColor.jpeg');
+                    textures.push('assets/models/walls/textures/02_-_Wood05_baseColor.png');
+                    textures.push('assets/models/walls/textures/07_-_Ornate_baseColor.png');
+                }
                 
-                // Common texture file names (with various formats)
-                const textureNames = [
-                    `${this.data.modelName}_diffuse.jpg`,
-                    `${this.data.modelName}_diffuse.png`,
-                    `${this.data.modelName}_albedo.jpg`,
-                    `${this.data.modelName}_albedo.png`,
-                    `${this.data.modelName}_color.jpg`,
-                    `${this.data.modelName}_color.png`,
-                    `${this.data.modelName}.jpg`,
-                    `${this.data.modelName}.png`,
-                    `${simplifiedName}.jpg`,
-                    `${simplifiedName}.png`,
-                    `texture.jpg`,
-                    `texture.png`,
-                    `diffuse.jpg`,
-                    `diffuse.png`
-                ];
+                // Floor textures (assuming structure based on how wall textures are organized)
+                if (category === 'floors') {
+                    textures.push('assets/models/floors/wood_textures/wood_baseColor.jpeg');
+                    textures.push('assets/models/floors/concrete_textures/concrete_baseColor.jpeg');
+                    // Also use the villa floor texture as fallback
+                    textures.push('assets/models/villa_textures/floor_baseColor.jpeg');
+                }
                 
-                // Build full paths
-                textureNames.forEach(name => {
-                    textures.push(basePath + name);
-                });
+                // Villa textures from the actual files we found
+                if (category === 'structures' || category === 'villa') {
+                    textures.push('assets/models/villa_textures/facade_baseColor.jpeg');
+                    textures.push('assets/models/villa_textures/fdtn_baseColor.jpeg');
+                    textures.push('assets/models/villa_textures/floor_baseColor.jpeg');
+                    textures.push('assets/models/villa_textures/villa_fl_plan_baseColor.png');
+                }
+                
+                // For other categories, we'll make educated guesses based on the repository structure
+                // These might need to be adjusted once we have access to those directories
+                
+                // Furniture (sofa, tables, etc.)
+                if (category === 'furniture' || category === 'sofa' || category === 'tables') {
+                    // Using best guesses based on repository structure
+                    textures.push('assets/models/sofa/textures/fabric_baseColor.jpeg');
+                    textures.push('assets/models/tables/textures/wood_baseColor.jpeg');
+                }
+                
+                // Bathroom - no textures folder found yet, using educated guess
+                if (category === 'bathroom') {
+                    textures.push('assets/models/bathroom/textures/ceramic_baseColor.jpeg');
+                }
+                
+                // Bedroom - no textures folder found yet, using educated guess
+                if (category === 'bedroom') {
+                    textures.push('assets/models/bedroom/textures/fabric_baseColor.jpeg');
+                }
+                
+                // Carpets - no textures folder found yet, using educated guess
+                if (category === 'carpets') {
+                    textures.push('assets/models/carpets/textures/carpet_baseColor.jpeg');
+                }
+                
+                // Accessories - no textures folder found yet, using educated guess
+                if (category === 'accessories') {
+                    textures.push('assets/models/accessories/textures/accessory_baseColor.jpeg');
+                }
+                
+                // Roofs - no textures folder found yet, using educated guess
+                if (category === 'roofs') {
+                    textures.push('assets/models/roofs/textures/roof_baseColor.jpeg');
+                }
+                
+                // Default textures as fallback for any category
+                textures.push('assets/textures/default_baseColor.jpeg');
                 
                 return textures;
             },
@@ -371,7 +453,11 @@ const ModelHelper = {
                     case 'bathroom': return '#55FFFF';
                     case 'bedroom': return '#FF55FF';
                     case 'furniture': return '#FFFF55';
-                    case 'decor': return '#FF55FF';
+                    case 'sofa': return '#FFAA55';
+                    case 'tables': return '#FFFF55';
+                    case 'accessories': return '#FF55FF';
+                    case 'carpets': return '#FF5555';
+                    case 'villa': return '#55FFAA';
                     default: return '#FF9955';
                 }
             },
@@ -416,7 +502,7 @@ const ModelHelper = {
             if (objectType && MODELS[objectType]) {
                 const modelData = MODELS[objectType];
                 
-                // Add model handler component
+                // Add model handler component if not already present
                 if (!element.hasAttribute('model-handler')) {
                     element.setAttribute('model-handler', {
                         modelSrc: element.getAttribute('gltf-model'),
