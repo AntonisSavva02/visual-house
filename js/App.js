@@ -1,1553 +1,1152 @@
 /**
- * EasyFloor - Interactive House Builder
- * Main application file
+ * Visual-House - Interactive Home Design Tool
+ * Main application controller
+ * Last updated: 2025-04-23
+ * Developer: AntonisSavva02
  */
 
 const APP = {
-    mode: 'build', // build, decorate, edit, move, erase
-    selectedItem: null,
-    selectedElement: null,
-    isPlacing: false,
-    dragStartPosition: { x: 0, y: 0 },
-    currentPosition: { x: 0, y: 0 },
-    placementValid: true,
-    gridSize: 0.5, // Grid size in meters
-    gridVisible: false,
-    objects: [], // All placed objects
-    currentRotation: 0,
-    currentScale: { x: 1, y: 1, z: 1 },
-    view: '3d', // 2d or 3d
-    undoStack: [],
-    redoStack: [],
-    lastSaved: null,
-    defaultHeight: 0, // For placing objects on the ground
-    viewHeight: 15, // Default camera height
-    selectionBox: null,
-    debugMode: true, // Set to true to enable debug messages
+    // App state
     initialized: false,
+    mode: 'build',               // Current mode: 'build', 'edit', 'move', 'erase'
+    isPlacing: false,            // Whether we're currently placing an object
+    selectedItem: null,          // Currently selected item from the catalog
+    selectedObject: null,        // Currently selected object in the scene
+    placementValid: true,        // Whether current placement position is valid
     
-    // Initialize the application
-    init() {
-        console.log("Initializing APP module...");
-        if (this.initialized) {
-            console.log("APP already initialized, skipping.");
+    // UI elements (populated on init)
+    categoryPanel: null,
+    categoryTabs: null,
+    itemsContainer: null,
+    placementGuide: null,
+    placementControls: null,
+    notification: null,
+    
+    // Scene elements
+    camera: null,
+    cameraRig: null,
+    houseContainer: null,
+    placementIndicator: null,
+    
+    // Init function
+    init: function() {
+        console.log('Initializing APP...');
+        
+        // Get UI elements
+        this.categoryPanel = document.getElementById('category-panel');
+        this.categoryTabs = document.querySelectorAll('.category-tab');
+        this.itemsContainer = document.getElementById('items-container');
+        this.placementGuide = document.getElementById('placement-guide');
+        this.placementControls = document.getElementById('placement-controls');
+        this.notification = document.getElementById('notification');
+        
+        // Get scene elements
+        this.camera = document.getElementById('camera');
+        this.cameraRig = document.getElementById('camera-rig');
+        this.houseContainer = document.getElementById('house-container');
+        this.placementIndicator = document.getElementById('placement-indicator');
+        
+        // Initialize components
+        this.initializeUI();
+        this.initializeEventListeners();
+        
+        // Initialize other components
+        this.Camera.init(this);
+        this.Collision.init(this);
+        
+        // Set initial state
+        this.setMode('build');
+        this.showCategory('structures');
+        
+        // Create grid for placement
+        this.createGrid();
+        
+        // Add debug information for model loading
+        this.setupModelDebugHelpers();
+        
+        this.initialized = true;
+        console.log('APP initialized successfully');
+        
+        // Show welcome notification
+        this.showNotification('Welcome to Visual-House! Select an item to begin.');
+    },
+    
+    // Setup debug helpers for model loading
+    setupModelDebugHelpers: function() {
+        // Monitor asset loading
+        const assets = document.querySelector('a-assets');
+        if (assets) {
+            assets.addEventListener('loaded', () => {
+                console.log('All assets loaded successfully');
+            });
+            
+            // Check for timeout
+            assets.addEventListener('timeout', () => {
+                console.warn('Asset loading timed out');
+                this.showNotification('Some assets failed to load, using default models', 'warning');
+            });
+        }
+        
+        // Override model error handling to provide better visibility
+        const scene = document.querySelector('a-scene');
+        if (scene) {
+            scene.addEventListener('model-error', (e) => {
+                console.error('Error loading model:', e.detail);
+                this.showNotification('Error loading model, using placeholder', 'error');
+            });
+        }
+    },
+    
+    // Create grid for placement
+    createGrid: function() {
+        const gridEntity = document.getElementById('grid');
+        gridEntity.innerHTML = '';
+        
+        // Create grid lines
+        const gridSize = 50;
+        const spacing = 1;
+        
+        // Create horizontal lines
+        for (let i = -gridSize/2; i <= gridSize/2; i += spacing) {
+            const line = document.createElement('a-entity');
+            line.setAttribute('line', {
+                start: { x: -gridSize/2, y: 0.01, z: i },
+                end: { x: gridSize/2, y: 0.01, z: i },
+                color: '#CCCCCC',
+                opacity: i === 0 ? 0.8 : 0.2, // Highlight the center line
+            });
+            gridEntity.appendChild(line);
+        }
+        
+        // Create vertical lines
+        for (let i = -gridSize/2; i <= gridSize/2; i += spacing) {
+            const line = document.createElement('a-entity');
+            line.setAttribute('line', {
+                start: { x: i, y: 0.01, z: -gridSize/2 },
+                end: { x: i, y: 0.01, z: gridSize/2 },
+                color: '#CCCCCC',
+                opacity: i === 0 ? 0.8 : 0.2, // Highlight the center line
+            });
+            gridEntity.appendChild(line);
+        }
+    },
+    
+    // Initialize UI
+    initializeUI: function() {
+        // Populate items from MODELS
+        this.populateItemsByCategory('structures');
+        
+        // Setup category tabs
+        this.categoryTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const category = tab.dataset.tab;
+                this.showCategory(category);
+            });
+        });
+        
+        // Setup toolbar buttons
+        document.getElementById('build-btn').addEventListener('click', () => this.setMode('build'));
+        document.getElementById('decorate-btn').addEventListener('click', () => this.setMode('decorate'));
+        document.getElementById('edit-btn').addEventListener('click', () => this.setMode('edit'));
+        document.getElementById('move-btn').addEventListener('click', () => this.setMode('move'));
+        document.getElementById('erase-btn').addEventListener('click', () => this.setMode('erase'));
+        
+        // Setup view controls
+        document.getElementById('view-2d').addEventListener('click', () => this.Camera.set2DView());
+        document.getElementById('view-3d').addEventListener('click', () => this.Camera.set3DView());
+        document.getElementById('zoom-in').addEventListener('click', () => this.Camera.zoomIn());
+        document.getElementById('zoom-out').addEventListener('click', () => this.Camera.zoomOut());
+        
+        // Setup placement controls
+        document.getElementById('place-confirm').addEventListener('click', () => this.confirmPlacement());
+        document.getElementById('place-cancel').addEventListener('click', () => this.cancelPlacement());
+        document.getElementById('place-rotate').addEventListener('click', () => this.rotatePlacementObject());
+        
+        // Setup context menu
+        document.getElementById('edit-btn').addEventListener('click', () => this.editSelectedObject());
+        document.getElementById('rotate-btn').addEventListener('click', () => this.rotateSelectedObject());
+        document.getElementById('duplicate-btn').addEventListener('click', () => this.duplicateSelectedObject());
+        document.getElementById('delete-btn').addEventListener('click', () => this.deleteSelectedObject());
+        
+        // Setup properties panel close button
+        document.getElementById('properties-close').addEventListener('click', () => {
+            document.getElementById('properties-panel').style.display = 'none';
+        });
+    },
+    
+    // Initialize event listeners
+    initializeEventListeners: function() {
+        // Add raycaster click event listener
+        const scene = document.querySelector('a-scene');
+        scene.addEventListener('click', (e) => this.handleSceneClick(e));
+        
+        // Add mousemove for object placement
+        scene.addEventListener('mousemove', (e) => {
+            if (this.isPlacing) {
+                this.updatePlacementIndicator(e);
+            }
+        });
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape key cancels placement or selection
+            if (e.key === 'Escape') {
+                if (this.isPlacing) {
+                    this.cancelPlacement();
+                } else if (this.selectedObject) {
+                    this.deselectObject();
+                }
+            }
+            
+            // Delete key removes selected object
+            if (e.key === 'Delete' && this.selectedObject) {
+                this.deleteSelectedObject();
+            }
+            
+            // R key rotates object being placed or selected
+            if (e.key === 'r' || e.key === 'R') {
+                if (this.isPlacing) {
+                    this.rotatePlacementObject();
+                } else if (this.selectedObject) {
+                    this.rotateSelectedObject();
+                }
+            }
+        });
+    },
+    
+    // Set current mode (build, edit, move, erase)
+    setMode: function(mode) {
+        // Cancel any ongoing placement
+        if (this.isPlacing) {
+            this.cancelPlacement();
+        }
+        
+        // Deselect any selected object
+        this.deselectObject();
+        
+        // Update mode
+        this.mode = mode;
+        
+        // Update UI
+        const buttons = document.querySelectorAll('.build-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`${mode}-btn`).classList.add('active');
+        
+        // Show/hide UI based on mode
+        if (mode === 'build' || mode === 'decorate') {
+            this.categoryPanel.style.display = 'flex';
+            if (mode === 'build') {
+                this.showCategory('structures');
+            } else {
+                this.showCategory('decor');
+            }
+            this.showNotification(`${mode.charAt(0).toUpperCase() + mode.slice(1)} mode: Select an item to place`);
+        } else {
+            this.categoryPanel.style.display = 'none';
+            this.showNotification(`${mode.charAt(0).toUpperCase() + mode.slice(1)} mode: Click on objects to ${mode}`);
+        }
+    },
+    
+    // Show category
+    showCategory: function(category) {
+        // Update tabs
+        this.categoryTabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === category);
+        });
+        
+        // Populate items
+        this.populateItemsByCategory(category);
+    },
+    
+    // Populate items grid with items from a category
+    populateItemsByCategory: function(category) {
+        // Clear previous items
+        this.itemsContainer.innerHTML = '';
+        
+        // Find all models in the selected category
+        const categoryItems = {};
+        
+        // Group by subcategory
+        Object.keys(MODELS).forEach(key => {
+            const model = MODELS[key];
+            if (model.category === category) {
+                // Determine subcategory based on model key
+                let subcategory = 'Other';
+                if (key.includes('wall')) subcategory = 'Walls';
+                else if (key.includes('floor')) subcategory = 'Floors';
+                else if (key.includes('roof')) subcategory = 'Roofs';
+                else if (key.includes('bathroom') || key.includes('toilet')) subcategory = 'Bathroom';
+                else if (key.includes('bed') || key.includes('wardrobe')) subcategory = 'Bedroom';
+                else if (key.includes('sofa') || key.includes('chair')) subcategory = 'Seating';
+                else if (key.includes('table')) subcategory = 'Tables';
+                else if (key.includes('carpet')) subcategory = 'Carpets';
+                else if (key.includes('lamp')) subcategory = 'Lighting';
+                
+                // Add to subcategory
+                if (!categoryItems[subcategory]) {
+                    categoryItems[subcategory] = [];
+                }
+                categoryItems[subcategory].push({ key, model });
+            }
+        });
+        
+        // Create subcategory containers
+        Object.keys(categoryItems).sort().forEach(subcategory => {
+            const items = categoryItems[subcategory];
+            
+            // Create subcategory title
+            const subcategoryDiv = document.createElement('div');
+            subcategoryDiv.className = 'subcategory';
+            
+            const title = document.createElement('div');
+            title.className = 'subcategory-title';
+            
+            // Add icon based on subcategory
+            let icon = 'cube';
+            if (subcategory === 'Walls') icon = 'square';
+            else if (subcategory === 'Floors') icon = 'layer-group';
+            else if (subcategory === 'Roofs') icon = 'home';
+            else if (subcategory === 'Bathroom') icon = 'bath';
+            else if (subcategory === 'Bedroom') icon = 'bed';
+            else if (subcategory === 'Seating') icon = 'couch';
+            else if (subcategory === 'Tables') icon = 'table';
+            else if (subcategory === 'Carpets') icon = 'rug';
+            else if (subcategory === 'Lighting') icon = 'lightbulb';
+            
+            title.innerHTML = `<div class="icon"><i class="fas fa-${icon}"></i></div>${subcategory}`;
+            subcategoryDiv.appendChild(title);
+            
+            // Create grid for items
+            const grid = document.createElement('div');
+            grid.className = 'items-grid';
+            
+            // Add each item
+            items.forEach(item => {
+                const itemCard = document.createElement('div');
+                itemCard.className = 'item-card';
+                itemCard.dataset.item = item.key;
+                
+                const preview = document.createElement('div');
+                preview.className = 'item-preview';
+                preview.innerHTML = `<div class="item-icon"><i class="${item.model.icon}"></i></div>`;
+                
+                const label = document.createElement('div');
+                label.className = 'item-label';
+                label.textContent = item.model.displayName;
+                
+                itemCard.appendChild(preview);
+                itemCard.appendChild(label);
+                
+                // Add click handler
+                itemCard.addEventListener('click', () => this.selectItem(item.key));
+                
+                grid.appendChild(itemCard);
+            });
+            
+            subcategoryDiv.appendChild(grid);
+            this.itemsContainer.appendChild(subcategoryDiv);
+        });
+    },
+    
+    // Select item from catalog
+    selectItem: function(itemKey) {
+        this.selectedItem = itemKey;
+        
+        // Update UI
+        const itemCards = document.querySelectorAll('.item-card');
+        itemCards.forEach(card => {
+            card.classList.toggle('active', card.dataset.item === itemKey);
+        });
+        
+        // Start placement
+        this.startPlacement();
+    },
+    
+    // Start placing an object
+    startPlacement: function() {
+        if (!this.selectedItem || !MODELS[this.selectedItem]) {
+            console.error('No item selected for placement');
             return;
         }
         
-        this.setupGrid();
-        this.loadSavedDesign();
-        this.createSelectionBox();
-        this.updateUI();
+        const model = MODELS[this.selectedItem];
         
-        // Initialize collision manager
-        if (typeof CollisionManager !== 'undefined' && CollisionManager.init) {
-            CollisionManager.init();
-        } else {
-            console.error("CollisionManager not found or missing init method!");
-        }
+        // Show placement indicator
+        this.isPlacing = true;
+        this.placementValid = true;
         
-        // Initialize camera controller
-        if (typeof CameraController !== 'undefined' && CameraController.init) {
-            CameraController.init();
-        } else {
-            console.error("CameraController not found or missing init method!");
-        }
+        // Create indicator with model
+        const indicator = this.placementIndicator;
+        indicator.innerHTML = '';
         
-        // Set up event listeners
-        this.setupEventListeners();
+        // Create model entity with enhanced loading handler
+        const modelEntity = document.createElement('a-entity');
+        modelEntity.setAttribute('gltf-model', model.model);
+        modelEntity.setAttribute('model-handler', {
+            modelSrc: model.model,
+            defaultColor: model.materials[0] || '#FF5555',
+            modelName: this.selectedItem,
+            category: model.category
+        });
+        modelEntity.setAttribute('scale', model.defaultScale);
+        modelEntity.setAttribute('rotation', { x: 0, y: 0, z: 0 });
         
-        // Initialize button event listeners
-        this.initializeButtons();
-        
-        // Add error handling for model loading
-        document.addEventListener('model-error', function(e) {
-            console.error('Model error:', e.detail.src);
-            APP.showNotification(`Error loading model: ${e.detail.src}`, 'error');
+        // Add semi-transparent material
+        modelEntity.setAttribute('material', {
+            opacity: 0.7,
+            transparent: true,
+            color: this.placementValid ? '#88FF88' : '#FF8888'
         });
         
-        // Show notification
-        this.showNotification('Welcome to EasyFloor! Start by selecting an item from the panel.', 'info');
+        // Add a backup box in case the model doesn't load
+        const backupBox = document.createElement('a-box');
+        backupBox.setAttribute('class', 'backup-box');
+        backupBox.setAttribute('width', model.boundingBox.width);
+        backupBox.setAttribute('height', model.boundingBox.height);
+        backupBox.setAttribute('depth', model.boundingBox.depth);
+        backupBox.setAttribute('material', {
+            color: model.materials[0] || '#FF5555',
+            opacity: 0.8,
+            wireframe: true
+        });
         
-        // Debug log to verify initialization
-        this.debug('Application initialized');
-
-        // Populate items grid initially with structures tab content
-        this.switchCategoryContent('structures');
+        // Add both elements to indicator
+        indicator.appendChild(modelEntity);
+        indicator.appendChild(backupBox);
         
-        // Mark as initialized
-        this.initialized = true;
+        indicator.setAttribute('visible', true);
+        indicator.setAttribute('position', { x: 0, y: 0.5, z: 0 });
+        indicator.setAttribute('rotation', { x: 0, y: 0, z: 0 });
+        
+        // Show placement guide and controls
+        this.placementGuide.classList.add('show');
+        this.placementGuide.querySelector('.text').textContent = `Click to place ${model.displayName}`;
+        
+        this.placementControls.classList.add('show');
     },
     
-    // Debug helper function
-    debug(message, object) {
-        if (this.debugMode) {
-            if (object) {
-                console.log(`[DEBUG] ${message}`, object);
-            } else {
-                console.log(`[DEBUG] ${message}`);
-            }
+    // Update placement indicator position
+    updatePlacementIndicator: function(event) {
+        if (!this.isPlacing) return;
+        
+        // Get intersection with the ground
+        const intersection = this.Camera.getGroundIntersection(event);
+        if (!intersection) return;
+        
+        // Update position
+        const position = intersection.point;
+        
+        // Snap to grid
+        position.x = Math.round(position.x);
+        position.z = Math.round(position.z);
+        position.y = Math.max(0.5, position.y); // Ensure it's above ground
+        
+        this.placementIndicator.setAttribute('position', position);
+        
+        // Check for placement validity
+        const modelData = MODELS[this.selectedItem];
+        const boundingBox = this.calculateBoundingBox(
+            position,
+            this.placementIndicator.getAttribute('rotation'),
+            modelData.boundingBox
+        );
+        
+        // Check if placement is valid
+        this.placementValid = this.isPlacementValid(boundingBox, this.selectedItem);
+        
+        // Update indicator color based on validity
+        const indicator = this.placementIndicator.firstChild;
+        if (indicator) {
+            indicator.setAttribute('material', {
+                opacity: 0.7,
+                transparent: true,
+                color: this.placementValid ? '#88FF88' : '#FF8888'
+            });
         }
     },
-
-    // Initialize button handlers
-    initializeButtons() {
-        console.log("Initializing button event listeners...");
+    
+    // Calculate bounding box for collision detection
+    calculateBoundingBox: function(position, rotation, size) {
+        // Simple AABB calculation without rotation consideration
+        const halfWidth = size.width / 2;
+        const halfHeight = size.height / 2;
+        const halfDepth = size.depth / 2;
         
-        try {
-            // Mode buttons - bottom toolbar
-            const buildBtn = document.getElementById('build-btn');
-            const decorateBtn = document.getElementById('decorate-btn');
-            const editBtn = document.getElementById('edit-btn');
-            const moveBtn = document.getElementById('move-btn');
-            const eraseBtn = document.getElementById('erase-btn');
+        return {
+            min: {
+                x: position.x - halfWidth,
+                y: position.y - halfHeight,
+                z: position.z - halfDepth
+            },
+            max: {
+                x: position.x + halfWidth,
+                y: position.y + halfHeight,
+                z: position.z + halfDepth
+            }
+        };
+    },
+    
+    // Check if placement is valid (no collisions)
+    isPlacementValid: function(boundingBox, objectType, excludeElement) {
+        // Check collisions with other objects
+        return this.Collision.checkPlacement(boundingBox, excludeElement);
+    },
+    
+    // Rotate placement object
+    rotatePlacementObject: function() {
+        if (!this.isPlacing) return;
+        
+        // Get current rotation and add 90 degrees
+        const rotation = this.placementIndicator.getAttribute('rotation');
+        rotation.y = (rotation.y + 90) % 360;
+        
+        this.placementIndicator.setAttribute('rotation', rotation);
+        
+        // Update collision detection
+        const position = this.placementIndicator.getAttribute('position');
+        const modelData = MODELS[this.selectedItem];
+        const boundingBox = this.calculateBoundingBox(position, rotation, modelData.boundingBox);
+        
+        // Check if placement is valid with new rotation
+        this.placementValid = this.isPlacementValid(boundingBox, this.selectedItem);
+    },
+    
+    // Confirm placement of object
+    confirmPlacement: function() {
+        if (!this.isPlacing || !this.placementValid) return;
+        
+        // Get the indicator position and rotation
+        const position = this.placementIndicator.getAttribute('position');
+        const rotation = this.placementIndicator.getAttribute('rotation');
+        
+        // Create the actual object
+        this.createObject(this.selectedItem, position, rotation);
+        
+        // Show success notification
+        const modelName = MODELS[this.selectedItem].displayName;
+        this.showNotification(`Placed ${modelName} successfully`, 'success');
+        
+        // Continue placing the same object
+        this.startPlacement();
+    },
+    
+    // Cancel placement
+    cancelPlacement: function() {
+        if (!this.isPlacing) return;
+        
+        // Hide placement indicator
+        this.isPlacing = false;
+        this.placementIndicator.setAttribute('visible', false);
+        
+        // Hide placement guide and controls
+        this.placementGuide.classList.remove('show');
+        this.placementControls.classList.remove('show');
+        
+        // Deselect item
+        this.selectedItem = null;
+        
+        // Update UI
+        const itemCards = document.querySelectorAll('.item-card');
+        itemCards.forEach(card => card.classList.remove('active'));
+    },
+    
+    // Create object in the scene
+    createObject: function(objectType, position, rotation) {
+        if (!objectType || !MODELS[objectType]) {
+            console.error(`Invalid model type: ${objectType}`);
+            return;
+        }
+        
+        const objectData = MODELS[objectType];
+        
+        // Ensure position is above ground
+        position.y = Math.max(0.5, position.y);
+        
+        // Create object entity with enhanced model handler
+        const obj = document.createElement('a-entity');
+        obj.setAttribute('class', 'interactive collidable');
+        obj.setAttribute('data-object-type', objectType);
+        obj.setAttribute('gltf-model', objectData.model);
+        obj.setAttribute('model-handler', {
+            modelSrc: objectData.model,
+            defaultColor: objectData.materials[0] || '#FF5555',
+            modelName: objectType,
+            category: objectData.category
+        });
+        obj.setAttribute('position', position);
+        obj.setAttribute('rotation', rotation);
+        obj.setAttribute('scale', objectData.defaultScale);
+        obj.setAttribute('shadow', 'cast: true; receive: true');
+        obj.setAttribute('visible', true);
+        
+        // Apply default material/color directly with emissive property to make it glow
+        obj.setAttribute('material', {
+            color: objectData.materials[0] || '#FF5555',
+            metalness: 0.2,
+            roughness: 0.8,
+            emissive: objectData.materials[0] || '#FF5555',
+            emissiveIntensity: 0.3,
+            opacity: 1.0,
+            transparent: false
+        });
+        
+        // Add a backup box in case the model doesn't load
+        const backupBox = document.createElement('a-box');
+        backupBox.setAttribute('class', 'backup-box');
+        backupBox.setAttribute('width', objectData.boundingBox.width);
+        backupBox.setAttribute('height', objectData.boundingBox.height);
+        backupBox.setAttribute('depth', objectData.boundingBox.depth);
+        backupBox.setAttribute('material', {
+            color: objectData.materials[0] || '#FF5555',
+            opacity: 0.8,
+            wireframe: true
+        });
+        obj.appendChild(backupBox);
+        
+        // Add a point light to help make the object visible
+        const pointLight = document.createElement('a-entity');
+        pointLight.setAttribute('light', {
+            type: 'point',
+            color: '#FFFFFF',
+            intensity: 0.5,
+            distance: 3
+        });
+        pointLight.setAttribute('position', '0 1 0');
+        obj.appendChild(pointLight);
+        
+        // Add to house container
+        this.houseContainer.appendChild(obj);
+        
+        // Debug log
+        console.log(`Created object: ${objectType} at position:`, position);
+        
+        // Hide backup box when model loads
+        obj.addEventListener('model-loaded', function() {
+            console.log(`Model loaded: ${objectType}`);
+            backupBox.setAttribute('visible', false);
             
-            // Clear any existing handlers and set new ones
-            const clearEventHandlers = (element) => {
-                if (!element) return;
-                const clone = element.cloneNode(true);
-                if (element.parentNode) {
-                    element.parentNode.replaceChild(clone, element);
+            // Ensure object is visible
+            setTimeout(() => {
+                obj.setAttribute('visible', true);
+                obj.object3D.visible = true;
+                
+                // Force update
+                if (obj.object3D) {
+                    obj.object3D.traverse((node) => {
+                        if (node.isMesh) {
+                            node.visible = true;
+                            if (node.material) {
+                                node.material.needsUpdate = true;
+                            }
+                        }
+                    });
                 }
-                return clone;
-            };
+            }, 100);
+        });
+        
+        // Add click handler for object selection
+        obj.addEventListener('click', (e) => {
+            // Prevent event propagation
+            e.stopPropagation();
             
-            // Redefine buttons after clearing handlers
-            if (buildBtn) {
-                const newBuildBtn = clearEventHandlers(buildBtn);
-                newBuildBtn.onclick = (e) => {
-                    console.log('Build button clicked');
-                    this.setMode('build');
-                    e.stopPropagation();
-                    return false;
-                };
-            } else {
-                console.error("Build button not found!");
+            // Handle based on current mode
+            switch(this.mode) {
+                case 'edit':
+                    this.selectObject(obj);
+                    break;
+                case 'move':
+                    this.startMovingObject(obj);
+                    break;
+                case 'erase':
+                    this.deleteObject(obj);
+                    break;
+                default:
+                    // In build or decorate mode, clicking on objects does nothing
+                    break;
             }
+        });
+        
+        return obj;
+    },
+    
+    // Force an object to be visible using all possible means
+    forceObjectVisibility: function(obj) {
+        if (!obj) return;
+        
+        // Force visibility at A-Frame level
+        obj.setAttribute('visible', true);
+        
+        // Apply direct object3D visibility if available
+        if (obj.object3D) {
+            obj.object3D.visible = true;
             
-            if (decorateBtn) {
-                const newDecorateBtn = clearEventHandlers(decorateBtn);
-                newDecorateBtn.onclick = (e) => {
-                    console.log('Decorate button clicked');
-                    this.setMode('decorate');
-                    e.stopPropagation();
-                    return false;
-                };
-            } else {
-                console.error("Decorate button not found!");
-            }
-            
-            if (editBtn) {
-                const newEditBtn = clearEventHandlers(editBtn);
-                newEditBtn.onclick = (e) => {
-                    console.log('Edit button clicked');
-                    this.setMode('edit');
-                    e.stopPropagation();
-                    return false;
-                };
-            } else {
-                console.error("Edit button not found!");
-            }
-            
-            if (moveBtn) {
-                const newMoveBtn = clearEventHandlers(moveBtn);
-                newMoveBtn.onclick = (e) => {
-                    console.log('Move button clicked');
-                    this.setMode('move');
-                    e.stopPropagation();
-                    return false;
-                };
-            } else {
-                console.error("Move button not found!");
-            }
-            
-            if (eraseBtn) {
-                const newEraseBtn = clearEventHandlers(eraseBtn);
-                newEraseBtn.onclick = (e) => {
-                    console.log('Erase button clicked');
-                    this.setMode('erase');
-                    e.stopPropagation();
-                    return false;
-                };
-            } else {
-                console.error("Erase button not found!");
-            }
-            
-            // View controls - right sidebar
-            const view2dBtn = document.getElementById('view-2d');
-            const view3dBtn = document.getElementById('view-3d');
-            const zoomInBtn = document.getElementById('zoom-in');
-            const zoomOutBtn = document.getElementById('zoom-out');
-            
-            if (view2dBtn) {
-                const newView2dBtn = clearEventHandlers(view2dBtn);
-                newView2dBtn.onclick = (e) => {
-                    console.log('2D view button clicked');
-                    this.setView('2d');
-                    e.stopPropagation();
-                    return false;
-                };
-            }
-            
-            if (view3dBtn) {
-                const newView3dBtn = clearEventHandlers(view3dBtn);
-                newView3dBtn.onclick = (e) => {
-                    console.log('3D view button clicked');
-                    this.setView('3d');
-                    e.stopPropagation();
-                    return false;
-                };
-            }
-            
-            if (zoomInBtn) {
-                const newZoomInBtn = clearEventHandlers(zoomInBtn);
-                newZoomInBtn.onclick = (e) => {
-                    console.log('Zoom in button clicked');
-                    if (typeof CameraController !== 'undefined' && CameraController.zoomIn) {
-                        CameraController.zoomIn();
+            // Traverse all children and make them visible
+            obj.object3D.traverse((node) => {
+                node.visible = true;
+                
+                if (node.isMesh) {
+                    // Apply material if missing
+                    if (!node.material) {
+                        const objType = obj.getAttribute('data-object-type');
+                        const color = (MODELS[objType] && MODELS[objType].materials && 
+                                     MODELS[objType].materials[0]) || '#FF5555';
+                        node.material = new THREE.MeshStandardMaterial({
+                            color: color,
+                            metalness: 0.2,
+                            roughness: 0.8
+                        });
                     }
-                    e.stopPropagation();
-                    return false;
-                };
-            }
-            
-            if (zoomOutBtn) {
-                const newZoomOutBtn = clearEventHandlers(zoomOutBtn);
-                newZoomOutBtn.onclick = (e) => {
-                    console.log('Zoom out button clicked');
-                    if (typeof CameraController !== 'undefined' && CameraController.zoomOut) {
-                        CameraController.zoomOut();
-                    }
-                    e.stopPropagation();
-                    return false;
-                };
-            }
-            
-            // Category tabs
-            document.querySelectorAll('.category-tab').forEach(tab => {
-                const newTab = clearEventHandlers(tab);
-                newTab.onclick = (e) => {
-                    console.log(`Category tab clicked: ${newTab.dataset.tab}`);
-                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-                    newTab.classList.add('active');
-                    this.switchCategoryContent(newTab.dataset.tab);
-                    e.stopPropagation();
-                    return false;
-                };
+                    
+                    // Make material visible
+                    node.material.transparent = false;
+                    node.material.opacity = 1.0;
+                    node.material.needsUpdate = true;
+                }
             });
-                        // Save/load/export buttons
-                        const saveBtn = document.getElementById('save-btn');
-                        const loadBtn = document.getElementById('load-btn');
-                        const exportBtn = document.getElementById('export-btn');
-                        
-                        if (saveBtn) {
-                            const newSaveBtn = clearEventHandlers(saveBtn);
-                            newSaveBtn.onclick = (e) => {
-                                console.log('Save button clicked');
-                                this.saveDesign();
-                                e.stopPropagation();
-                                return false;
-                            };
-                        }
-                        
-                        if (loadBtn) {
-                            const newLoadBtn = clearEventHandlers(loadBtn);
-                            newLoadBtn.onclick = (e) => {
-                                console.log('Load button clicked');
-                                this.loadDesign();
-                                e.stopPropagation();
-                                return false;
-                            };
-                        }
-                        
-                        if (exportBtn) {
-                            const newExportBtn = clearEventHandlers(exportBtn);
-                            newExportBtn.onclick = (e) => {
-                                console.log('Export button clicked');
-                                this.exportDesign();
-                                e.stopPropagation();
-                                return false;
-                            };
-                        }
-                        
-                        // Placement control buttons
-                        const placeCancelBtn = document.getElementById('place-cancel');
-                        const placeRotateBtn = document.getElementById('place-rotate');
-                        const placeConfirmBtn = document.getElementById('place-confirm');
-                        
-                        if (placeCancelBtn) {
-                            const newPlaceCancelBtn = clearEventHandlers(placeCancelBtn);
-                            newPlaceCancelBtn.onclick = (e) => {
-                                console.log('Cancel placement button clicked');
-                                this.cancelPlacement();
-                                e.stopPropagation();
-                                return false;
-                            };
-                        }
-                        
-                        if (placeRotateBtn) {
-                            const newPlaceRotateBtn = clearEventHandlers(placeRotateBtn);
-                            newPlaceRotateBtn.onclick = (e) => {
-                                console.log('Rotate placement button clicked');
-                                this.rotateObject();
-                                e.stopPropagation();
-                                return false;
-                            };
-                        }
-                        
-                        if (placeConfirmBtn) {
-                            const newPlaceConfirmBtn = clearEventHandlers(placeConfirmBtn);
-                            newPlaceConfirmBtn.onclick = (e) => {
-                                console.log('Confirm placement button clicked');
-                                this.confirmPlacement();
-                                e.stopPropagation();
-                                return false;
-                            };
-                        }
-                        
-                        // Properties panel close button
-                        const propertiesCloseBtn = document.getElementById('properties-close');
-                        if (propertiesCloseBtn) {
-                            const newPropertiesCloseBtn = clearEventHandlers(propertiesCloseBtn);
-                            newPropertiesCloseBtn.onclick = (e) => {
-                                console.log('Properties close button clicked');
-                                document.getElementById('properties-panel').style.display = 'none';
-                                e.stopPropagation();
-                                return false;
-                            };
-                        }
-                        
-                        console.log('Button initialization complete!');
-                    } catch (e) {
-                        console.error('Error initializing buttons:', e);
-                    }
-                },
+        }
+    },
+    
+    // Handle scene click
+    handleSceneClick: function(event) {
+        if (this.isPlacing && this.placementValid) {
+            // When placing, click confirms placement at the indicator position
+            this.confirmPlacement();
+        } else if (event.target.id === 'ground' || event.target.closest('#ground')) {
+            // Clicking on ground deselects objects
+            this.deselectObject();
+        }
+    },
+    
+    // Select object
+    selectObject: function(obj) {
+        // Deselect previous object
+        this.deselectObject();
+        
+        // Select new object
+        this.selectedObject = obj;
+        
+        // Highlight selected object
+        obj.setAttribute('material', {
+            opacity: 1,
+            transparent: true,
+            emissive: '#5B8BFF',
+            emissiveIntensity: 0.5
+        });
+        
+        // Show object menu
+        this.showObjectMenu(obj);
+        
+        // Show properties panel
+        this.showPropertiesPanel(obj);
+    },
+    
+    // Deselect object
+    deselectObject: function() {
+        if (!this.selectedObject) return;
+        
+        // Remove highlight
+        this.selectedObject.removeAttribute('material');
+        
+        // Hide object menu
+        const objectMenu = document.getElementById('object-menu');
+        objectMenu.style.display = 'none';
+        
+        // Hide properties panel
+        const propertiesPanel = document.getElementById('properties-panel');
+        propertiesPanel.style.display = 'none';
+        
+        this.selectedObject = null;
+    },
+    
+    // Show object menu near the selected object
+    showObjectMenu: function(obj) {
+        const objectMenu = document.getElementById('object-menu');
+        
+        // Get object's screen position
+        const objPos = obj.getAttribute('position');
+        const screenPos = this.Camera.worldToScreen(objPos);
+        
+        // Position menu
+        objectMenu.style.display = 'flex';
+        objectMenu.style.left = `${screenPos.x + 50}px`; // Offset to not overlap the object
+        objectMenu.style.top = `${screenPos.y - 60}px`; // Position above the object
+    },
+    
+    // Show properties panel with object properties
+    showPropertiesPanel: function(obj) {
+        const propertiesPanel = document.getElementById('properties-panel');
+        const propertiesContent = document.getElementById('properties-content');
+        
+        // Get object type and data
+        const objectType = obj.getAttribute('data-object-type');
+        const objectData = MODELS[objectType];
+        
+        // Create properties content
+        propertiesContent.innerHTML = '';
+        
+        // Object Type group
+        const typeGroup = document.createElement('div');
+        typeGroup.className = 'property-group';
+        typeGroup.innerHTML = `
+            <div class="group-title">Object Info</div>
+            <div class="property-row">
+                <label>Type</label>
+                <input type="text" value="${objectData.displayName}" disabled>
+            </div>
+            <div class="property-row">
+                <label>Category</label>
+                <input type="text" value="${objectData.category.charAt(0).toUpperCase() + objectData.category.slice(1)}" disabled>
+            </div>
+        `;
+        propertiesContent.appendChild(typeGroup);
+        
+        // Position group
+        const posGroup = document.createElement('div');
+        posGroup.className = 'property-group';
+        posGroup.innerHTML = `
+            <div class="group-title">Position</div>
+            <div class="property-row">
+                <label>X Position</label>
+                <div class="slider-control">
+                    <div class="slider-row">
+                        <input type="range" id="pos-x" min="-25" max="25" value="${obj.getAttribute('position').x}" step="0.5">
+                        <span class="slider-value" id="pos-x-value">${obj.getAttribute('position').x}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="property-row">
+                <label>Z Position</label>
+                <div class="slider-control">
+                    <div class="slider-row">
+                        <input type="range" id="pos-z" min="-25" max="25" value="${obj.getAttribute('position').z}" step="0.5">
+                        <span class="slider-value" id="pos-z-value">${obj.getAttribute('position').z}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        propertiesContent.appendChild(posGroup);
+        
+        // Rotation group
+        const rotGroup = document.createElement('div');
+        rotGroup.className = 'property-group';
+        rotGroup.innerHTML = `
+            <div class="group-title">Rotation</div>
+            <div class="property-row">
+                <label>Y Rotation</label>
+                <div class="slider-control">
+                    <div class="slider-row">
+                        <input type="range" id="rot-y" min="0" max="359" value="${obj.getAttribute('rotation').y}" step="45">
+                        <span class="slider-value" id="rot-y-value">${obj.getAttribute('rotation').y}°</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        propertiesContent.appendChild(rotGroup);
+        
+        // Materials group (if available)
+        if (objectData.materials && objectData.materials.length > 0) {
+            const matGroup = document.createElement('div');
+            matGroup.className = 'property-group';
+            matGroup.innerHTML = `
+                <div class="group-title">Appearance</div>
+                <div class="property-row">
+                    <label>Material</label>
+                    <div class="color-options" id="color-options">
+                        ${objectData.materials.map((color, index) => `
+                            <div class="color-option" style="background-color: ${color}" data-color="${color}" data-index="${index}"></div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            propertiesContent.appendChild(matGroup);
+        }
+        
+        // Actions group
+        const actionsGroup = document.createElement('div');
+        actionsGroup.className = 'property-group';
+        actionsGroup.innerHTML = `
+            <div class="group-title">Actions</div>
+            <div class="property-actions">
+                <div class="property-btn btn-secondary" id="duplicate-property">Duplicate</div>
+                <div class="property-btn danger" id="delete-property">Delete</div>
+            </div>
+        `;
+        propertiesContent.appendChild(actionsGroup);
+        
+        // Add event listeners to UI controls
+        
+        // Position X slider
+        const posXSlider = document.getElementById('pos-x');
+        const posXValue = document.getElementById('pos-x-value');
+        posXSlider.addEventListener('input', () => {
+            const value = parseFloat(posXSlider.value);
+            posXValue.textContent = value;
+            const position = obj.getAttribute('position');
+            position.x = value;
+            obj.setAttribute('position', position);
+        });
+        
+        // Position Z slider
+        const posZSlider = document.getElementById('pos-z');
+        const posZValue = document.getElementById('pos-z-value');
+        posZSlider.addEventListener('input', () => {
+            const value = parseFloat(posZSlider.value);
+            posZValue.textContent = value;
+            const position = obj.getAttribute('position');
+            position.z = value;
+            obj.setAttribute('position', position);
+        });
+        
+        // Rotation Y slider
+        const rotYSlider = document.getElementById('rot-y');
+        const rotYValue = document.getElementById('rot-y-value');
+        rotYSlider.addEventListener('input', () => {
+            const value = parseInt(rotYSlider.value);
+            rotYValue.textContent = `${value}°`;
+            const rotation = obj.getAttribute('rotation');
+            rotation.y = value;
+            obj.setAttribute('rotation', rotation);
+        });
+        
+        // Color options
+        const colorOptions = document.querySelectorAll('#color-options .color-option');
+        colorOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const color = option.dataset.color;
                 
-                setupEventListeners() {
-                    console.log("Setting up event listeners...");
-                    
-                    // Add this debug listener for all clicks
-                    document.addEventListener('click', (e) => {
-                        console.log(`Click detected on: ${e.target.tagName} ${e.target.id || e.target.className}`);
-                    }, true);
-                    
-                    // A-Frame scene events for mouse interaction
-                    const scene = document.querySelector('a-scene');
-                    
-                    if (scene) {
-                        scene.addEventListener('mousedown', (e) => {
-                            console.log('Mouse down on scene', e.detail);
-                            this.handleMouseDown(e);
-                        }, true);
-                        
-                        scene.addEventListener('mousemove', (e) => this.handleMouseMove(e), true);
-                        
-                        scene.addEventListener('mouseup', (e) => {
-                            console.log('Mouse up on scene', e.detail);
-                            this.handleMouseUp(e);
-                        }, true);
-                        
-                        // Touch events for mobile
-                        scene.addEventListener('touchstart', (e) => this.handleTouchStart(e), true);
-                        scene.addEventListener('touchmove', (e) => this.handleTouchMove(e), true);
-                        scene.addEventListener('touchend', (e) => this.handleTouchEnd(e), true);
-                    } else {
-                        console.error('A-Frame scene not found!');
-                    }
-                    
-                    // Object menu event listeners - context menu buttons
-                    const contextEditBtn = document.querySelector('#object-menu #edit-btn');
-                    const rotateBtn = document.getElementById('rotate-btn');
-                    const duplicateBtn = document.getElementById('duplicate-btn');
-                    const deleteBtn = document.getElementById('delete-btn');
-                    
-                    if (contextEditBtn) {
-                        contextEditBtn.addEventListener('click', (e) => { 
-                            console.log('Context menu edit button clicked');
-                            e.stopPropagation();
-                            this.editSelectedObject(); 
-                            return false;
-                        });
-                    }
-                    
-                    if (rotateBtn) {
-                        rotateBtn.addEventListener('click', (e) => { 
-                            console.log('Context menu rotate button clicked');
-                            e.stopPropagation();
-                            this.rotateSelectedObject(); 
-                            return false;
-                        });
-                    }
-                    
-                    if (duplicateBtn) {
-                        duplicateBtn.addEventListener('click', (e) => { 
-                            console.log('Context menu duplicate button clicked');
-                            e.stopPropagation();
-                            this.duplicateSelectedObject(); 
-                            return false;
-                        });
-                    }
-                    
-                    if (deleteBtn) {
-                        deleteBtn.addEventListener('click', (e) => { 
-                            console.log('Context menu delete button clicked');
-                            e.stopPropagation();
-                            this.deleteSelectedObject(); 
-                            return false;
-                        });
-                    }
-                    
-                    // Context menu for objects
-                    document.addEventListener('contextmenu', (e) => {
-                        if (e.target.closest('a-entity') && e.target.closest('a-entity').classList.contains('interactive')) {
-                            e.preventDefault();
-                            this.showObjectMenu(e);
-                            return false;
-                        }
-                    });
-                    
-                    // Keyboard shortcuts
-                    document.addEventListener('keydown', (e) => {
-                        if (e.key === 'Delete' && this.selectedElement) {
-                            this.deleteSelectedObject();
-                        }
-                        else if (e.key === 'Escape') {
-                            if (this.isPlacing) {
-                                this.cancelPlacement();
-                            } else if (this.selectedElement) {
-                                this.deselectObject();
-                            }
-                        }
-                        else if (e.key === 'r' && this.selectedElement) {
-                            this.rotateSelectedObject();
-                        }
-                        else if (e.ctrlKey && e.key === 'z') {
-                            this.undo();
-                        }
-                        else if (e.ctrlKey && e.key === 'y') {
-                            this.redo();
-                        }
-                        else if (e.ctrlKey && e.key === 's') {
-                            e.preventDefault();
-                            this.saveDesign();
-                        }
-                    });
-                    
-                    // Special handler for ground to catch click events
-                    const ground = document.getElementById('ground');
-                    if (ground) {
-                        ground.addEventListener('click', (e) => {
-                            console.log('Ground clicked directly', e);
-                            // Handle ground clicks for object placement
-                            if (this.isPlacing) {
-                                console.log("Ground click - attempting placement");
-                                this.confirmPlacement();
-                            }
-                        }, true);
-                    }
-                    
-                    console.log("Event listeners setup completed!");
-                },
+                // Highlight selected color
+                colorOptions.forEach(c => c.classList.remove('active'));
+                option.classList.add('active');
                 
-                // Switch category content based on selected tab
-                switchCategoryContent(tabName) {
-                    console.log(`Switching to category: ${tabName}`);
-                    
-                    let container = document.getElementById('items-container');
-                    if (!container) {
-                        // Create items container if it doesn't exist
-                        const categoryContent = document.querySelector('.category-content');
-                        if (!categoryContent) {
-                            console.error("Category content element not found");
-                            return;
-                        }
-                        container = document.createElement('div');
-                        container.id = 'items-container';
-                        container.className = 'items-grid';
-                        categoryContent.appendChild(container);
-                    }
-                    
-                    // Clear existing content
-                    container.innerHTML = ''; 
-                    
-                    // Filter items based on the selected category
-                    if (typeof MODELS === 'undefined') {
-                        console.error("MODELS object is undefined");
-                        return;
-                    }
-                    
-                    let itemsAdded = 0;
-                    
-                    Object.entries(MODELS).forEach(([key, model]) => {
-                        if (model && model.category === tabName) {
-                            const itemCard = this.createItemCard(key, model);
-                            container.appendChild(itemCard);
-                            itemsAdded++;
-                        }
-                    });
-                    
-                    console.log(`Added ${itemsAdded} items to the ${tabName} category`);
-                    
-                    // Attach click handlers to the new cards
-                    container.querySelectorAll('.item-card').forEach(item => {
-                        item.onclick = (e) => {
-                            console.log(`Item card clicked: ${item.dataset.item}`);
-                            
-                            document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
-                            item.classList.add('active');
-                            
-                            this.selectedItem = item.dataset.item;
-                            this.prepareObjectPlacement(this.selectedItem);
-                            
-                            e.stopPropagation();
-                            return false;
-                        };
-                    });
-                },
-                
-                createItemCard(key, model) {
-                    const card = document.createElement('div');
-                    card.className = 'item-card';
-                    card.dataset.item = key;
-                    
-                    card.innerHTML = `
-                        <div class="item-preview">
-                            <i class="${model.icon} item-icon"></i>
-                        </div>
-                        <div class="item-label">${model.displayName || key}</div>
-                    `;
-                    
-                    return card;
-                },
-                
-                setupGrid() {
-                    const grid = document.getElementById('grid');
-                    if (!grid) {
-                        console.error("Grid element not found");
-                        return;
-                    }
-                    
-                    const size = 20; // Grid size in meters
-                    const divisions = size / this.gridSize;
-                    
-                    // Create grid lines
-                    for (let i = -size/2; i <= size/2; i += this.gridSize) {
-                        // X axis lines
-                        const xLine = document.createElement('a-entity');
-                        xLine.setAttribute('line', `start: ${i} 0.01 ${-size/2}; end: ${i} 0.01 ${size/2}; color: #BBBBBB; opacity: 0.3`);
-                        xLine.setAttribute('class', 'grid-line');
-                        grid.appendChild(xLine);
-                        
-                        // Z axis lines
-                        const zLine = document.createElement('a-entity');
-                        zLine.setAttribute('line', `start: ${-size/2} 0.01 ${i}; end: ${size/2} 0.01 ${i}; color: #BBBBBB; opacity: 0.3`);
-                        zLine.setAttribute('class', 'grid-line');
-                        grid.appendChild(zLine);
-                    }
-                    
-                    // Initialize grid visibility
-                    this.setGridVisibility(this.gridVisible);
-                },
-                
-                // Method to toggle grid visibility
-                setGridVisibility(visible) {
-                    this.gridVisible = visible;
-                    const gridLines = document.querySelectorAll('.grid-line');
-                    gridLines.forEach(line => {
-                        line.setAttribute('visible', visible);
-                    });
-                },
-                
-                createSelectionBox() {
-                    // Create a selection box for highlighting selected objects
-                    const scene = document.querySelector('a-scene');
-                    if (!scene) {
-                        console.error("Scene element not found");
-                        return;
-                    }
-                    
-                    this.selectionBox = document.createElement('a-entity');
-                    this.selectionBox.setAttribute('id', 'selection-box');
-                    this.selectionBox.setAttribute('visible', 'false');
-                    scene.appendChild(this.selectionBox);
-                },
-                
-                setMode(mode) {
-                    this.mode = mode;
-                    console.log(`Setting mode to: ${mode}`);
-                    
-                    // Update UI to reflect the current mode
-                    document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('active'));
-                    const modeBtn = document.getElementById(`${mode}-btn`);
-                    if (modeBtn) {
-                        modeBtn.classList.add('active');
-                    }
-                    
-                    // Show or hide category panel based on mode
-                    const categoryPanel = document.getElementById('category-panel');
-                    if (categoryPanel) {
-                        if (mode === 'build' || mode === 'decorate') {
-                            categoryPanel.style.display = 'flex';
-                            
-                            // Show the appropriate tab based on mode
-                            const tabSelector = mode === 'build' ? '[data-tab="structures"]' : '[data-tab="furniture"]';
-                            const tab = document.querySelector(tabSelector);
-                            if (tab) {
-                                tab.click();
-                            }
-                        } else {
-                            categoryPanel.style.display = 'none';
-                        }
-                    }
-                    
-                    // Show help message based on mode
-                    if (mode === 'erase') {
-                        this.deselectObject();
-                        this.showNotification('Erase mode: Click on objects to remove them', 'info');
-                    } else if (mode === 'move') {
-                        this.showNotification('Move mode: Click and drag objects to reposition them', 'info');
-                    } else if (mode === 'edit') {
-                        this.showNotification('Edit mode: Click on objects to modify their properties', 'info');
-                    } else {
-                        const propertiesPanel = document.getElementById('properties-panel');
-                        if (propertiesPanel) {
-                            propertiesPanel.style.display = 'none';
-                        }
-                    }
-                },
-                
-                setView(view) {
-                    this.view = view;
-                    console.log(`Setting view to: ${view}`);
-                    
-                    // Adjust camera position and rotation based on view
-                    if (view === '2d') {
-                        if (typeof CameraController !== 'undefined' && CameraController.set2DView) {
-                            CameraController.set2DView();
-                        }
-                    } else {
-                        if (typeof CameraController !== 'undefined' && CameraController.set3DView) {
-                            CameraController.set3DView();
-                        }
-                    }
-                },
-                
-                prepareObjectPlacement(objectType) {
-                    console.log(`Preparing placement for: ${objectType}`);
-                    
-                    if (!objectType) {
-                        console.error("No object type specified");
-                        return;
-                    }
-                    
-                    this.isPlacing = true;
-                    this.currentRotation = 0;
-                    
-                    // Get object details from models
-                    if (typeof MODELS === 'undefined') {
-                        console.error("MODELS not defined");
-                        return;
-                    }
-                    
-                    const objectData = MODELS[objectType];
-                    if (!objectData) {
-                        console.error(`Model type not found: ${objectType}`);
-                        this.showNotification(`Error: Model type ${objectType} not found`, 'error');
-                        return;
-                    }
-                    
-                    console.log("Object data:", objectData);
-                    
-                    // Create temporary object for placement preview
-                    const indicator = document.getElementById('placement-indicator');
-                    if (!indicator) {
-                        console.error("Placement indicator element not found");
-                        return;
-                    }
-                    
-                    indicator.innerHTML = ''; // Clear previous contents
-                    
-                    // Create object based on type
-                    const obj = document.createElement('a-entity');
-                    obj.setAttribute('class', 'placement-preview');
-                    
-                    if (objectData.model) {
-                        obj.setAttribute('gltf-model', objectData.model);
-                        obj.setAttribute('shadow', 'cast: true; receive: false');
-                    }
-                    
-                    // Set material to indicate placement validity
-                    // Add a semi-transparent overlay
-                    const overlay = document.createElement('a-entity');
-                    overlay.setAttribute('geometry', `primitive: box; width: ${objectData.boundingBox.width}; height: ${objectData.boundingBox.height}; depth: ${objectData.boundingBox.depth}`);
-                    overlay.setAttribute('material', 'opacity: 0.4; color: #19EFAA; wireframe: true');
-                    overlay.setAttribute('class', 'placement-overlay');
-                    obj.appendChild(overlay);
-                    
-                    indicator.appendChild(obj);
-                    indicator.setAttribute('visible', true);
-                    
-                    // Show placement controls
-                    const placementControls = document.getElementById('placement-controls');
-                    if (placementControls) {
-                        placementControls.classList.add('show');
-                    }
-                    
-                    // Show placement guide
-                    const placementGuide = document.getElementById('placement-guide');
-                    if (placementGuide) {
-                        const textElement = placementGuide.querySelector('.text');
-                        if (textElement) {
-                            textElement.textContent = `Click to place ${objectData.displayName || objectType}`;
-                        }
-                        placementGuide.classList.add('show');
-                    }
-                    
-                    // Show grid overlay
-                    const gridOverlay = document.getElementById('grid-overlay');
-                    if (gridOverlay) {
-                        gridOverlay.classList.add('show');
-                    }
-                    
-                    // Set grid visibility
-                    this.setGridVisibility(true);
-                    
-                    console.log("Object placement prepared - indicator should be visible");
-                },
-                
-                // Check if placement is valid (no collisions)
-                isPlacementValid(boundingBox, objectType, excludeElement) {
-                    console.log("Checking placement validity");
-                    // For simplicity, we'll always return true in this version
-                    return true;
-                },
-                
-                calculateBoundingBox(position, rotation, size) {
-                    // Simple AABB calculation (no rotation for now)
-                    const halfWidth = size.width / 2;
-                    const halfHeight = size.height / 2;
-                    const halfDepth = size.depth / 2;
-                    
-                    return {
-                        min: {
-                            x: position.x - halfWidth,
-                            y: position.y - halfHeight,
-                            z: position.z - halfDepth
-                        },
-                        max: {
-                            x: position.x + halfWidth,
-                            y: position.y + halfHeight,
-                            z: position.z + halfDepth
-                        }
-                    };
-                },
-                
-                handleMouseDown(event) {
-                    console.log("Mouse down event:", event);
-                    
-                    // Store starting position
-                    const intersection = event.detail.intersection;
-                    if (!intersection) {
-                        console.log("No intersection in mouse down");
-                        return;
-                    }
-                    
-                    console.log("Intersection point:", intersection.point);
-                    
-                    this.dragStartPosition = {
-                        x: intersection.point.x,
-                        y: intersection.point.y,
-                        z: intersection.point.z
-                    };
-                    
-                    // Handle different modes
-                    if (this.isPlacing) {
-                        console.log("In placement mode - will handle in mouseup");
-                        // When placing, clicks will be handled in mouseup
-                    } 
-                    else if (this.mode === 'move' && event.target.classList.contains('interactive')) {
-                        // Select and start moving the clicked object
-                        this.selectedElement = event.target.closest('.interactive');
-                        this.selectObject(this.selectedElement);
-                        this.isDragging = true;
-                        console.log("Selected for moving:", this.selectedElement);
-                    }
-                    else if (this.mode === 'edit' && event.target.classList.contains('interactive')) {
-                        // Select the object and show properties panel
-                        this.selectedElement = event.target.closest('.interactive');
-                        this.selectObject(this.selectedElement);
-                        this.showPropertiesPanel();
-                        console.log("Selected for editing:", this.selectedElement);
-                    }
-                    else if (this.mode === 'erase' && event.target.classList.contains('interactive')) {
-                        // Delete the clicked object
-                        this.selectedElement = event.target.closest('.interactive');
-                        this.deleteObject(this.selectedElement);
-                        console.log("Object deleted");
-                    }
-                    else if (event.target.closest('#ground')) {
-                        console.log("Ground element clicked in mousedown");
-                        // Clicked on ground - handle placement if in placing mode
-                        if (this.isPlacing) {
-                            console.log("In placement mode and clicked ground - will handle in mouseup");
-                        } else {
-                            // Just deselect any selected object
-                            this.deselectObject();
-                            console.log("Clicked on ground - deselecting");
-                        }
-                    }
-                },
-                
-                handleMouseMove(event) {
-                    const intersection = event.detail.intersection;
-                    if (!intersection) return;
-                    
-                    this.currentPosition = {
-                        x: intersection.point.x,
-                        y: intersection.point.y,
-                        z: intersection.point.z
-                    };
-                    
-                    if (this.isPlacing) {
-                        // Update position of placement indicator
-                        const indicator = document.getElementById('placement-indicator');
-                        if (!indicator) {
-                            console.error("Placement indicator not found");
-                            return;
-                        }
-                        
-                        // Snap to grid
-                        const snappedPos = this.snapToGrid(this.currentPosition);
-                        indicator.setAttribute('position', snappedPos);
-                        
-                        // Set rotation
-                        indicator.setAttribute('rotation', { x: 0, y: this.currentRotation, z: 0 });
-                        
-                        // The placement is always valid in this simplified version
-                        this.placementValid = true;
-                        
-                        // Update overlay to indicate validity
-                        const overlay = indicator.querySelector('.placement-overlay');
-                        if (overlay) {
-                            overlay.setAttribute('material', 
-                                this.placementValid ? 
-                                'opacity: 0.4; color: #19EFAA; wireframe: true' : 
-                                'opacity: 0.4; color: #FF7367; wireframe: true'
-                            );
-                        }
-                    }
-                    else if (this.isDragging && this.selectedElement) {
-                        // Move the selected object
-                        const currentPos = this.selectedElement.getAttribute('position');
-                        const deltaX = this.currentPosition.x - this.dragStartPosition.x;
-                        const deltaZ = this.currentPosition.z - this.dragStartPosition.z;
-                        
-                        const newPos = {
-                            x: currentPos.x + deltaX,
-                            y: currentPos.y,
-                            z: currentPos.z + deltaZ
-                        };
-                        
-                        // Move immediately (always valid in this simplified version)
-                        this.selectedElement.setAttribute('position', newPos);
-                        this.updateSelectionBox();
-                        
-                        // Update object in objects array
-                        const index = this.objects.findIndex(obj => obj.element === this.selectedElement);
-                        if (index !== -1) {
-                            this.objects[index].position = { ...newPos };
-                        }
-                        
-                        // Update drag start for the next move
-                        this.dragStartPosition = this.currentPosition;
-                    }
-                },
-                
-                handleMouseUp(event) {
-                    console.log("Mouse up event:", event);
-                    console.log("Is placing:", this.isPlacing);
-                    console.log("Placement valid:", this.placementValid);
-                    console.log("Target:", event.target);
-                    
-                    // Check if we're in placement mode
-                    if (this.isPlacing) {
-                        console.log("In placement mode - confirming placement");
-                        
-                        // Always allow placement in this simplified version
-                        this.placementValid = true;
-                        
-                        // Call confirm placement directly
-                        this.confirmPlacement();
-                    }
-                    
-                    this.isDragging = false;
-                },
-                
-                // Touch event handlers (similar to mouse events but for mobile)
-                handleTouchStart(event) {
-                    // Prevent default to avoid scrolling
-                    event.preventDefault();
-                    
-                    // Convert touch to mouse event and handle
-                    const touch = event.touches[0];
-                    const mouseEvent = new CustomEvent('mousedown', {
-                        detail: {
-                            intersection: {
-                                point: {
-                                    x: touch.clientX,
-                                    y: touch.clientY,
-                                    z: 0
-                                }
-                            }
-                        }
-                    });
-                    
-                    this.handleMouseDown(mouseEvent);
-                },
-                
-                handleTouchMove(event) {
-                    event.preventDefault();
-                    
-                    const touch = event.touches[0];
-                    const mouseEvent = new CustomEvent('mousemove', {
-                        detail: {
-                            intersection: {
-                                point: {
-                                    x: touch.clientX,
-                                    y: touch.clientY,
-                                    z: 0
-                                }
-                            }
-                        }
-                    });
-                    
-                    this.handleMouseMove(mouseEvent);
-                },
-                
-                handleTouchEnd(event) {
-                    event.preventDefault();
-                    
-                    const mouseEvent = new CustomEvent('mouseup', {});
-                    this.handleMouseUp(mouseEvent);
-                },
-                
-                confirmPlacement() {
-                    console.log("Confirming placement");
-                    
-                    try {
-                        // Get the indicator and its position/rotation
-                        const indicator = document.getElementById('placement-indicator');
-                        if (!indicator) {
-                            console.error("Placement indicator not found");
-                            return;
-                        }
-                        
-                        const position = indicator.getAttribute('position');
-                        const rotation = indicator.getAttribute('rotation');
-                        
-                        // Create the actual object
-                        const objectType = this.selectedItem;
-                        console.log("Selected item:", objectType);
-                        
-                        if (!objectType || !MODELS || !MODELS[objectType]) {
-                            console.error(`Invalid model type: ${objectType}`);
-                            return;
-                        }
-                        
-                        const objectData = MODELS[objectType];
-                        
-                        // Create object
-                        const obj = document.createElement('a-entity');
-                        obj.setAttribute('class', 'interactive collidable');
-                        obj.setAttribute('data-type', objectType);
-                        obj.setAttribute('position', position);
-                        obj.setAttribute('rotation', rotation);
-                        obj.setAttribute('scale', objectData.defaultScale || { x: 1, y: 1, z: 1 });
-                        
-                        // Set model
-                        if (objectData.model) {
-                            obj.setAttribute('gltf-model', objectData.model);
-                            obj.setAttribute('shadow', 'cast: true; receive: true');
-                        }
-                        
-                        // Add to house container
-                        const houseContainer = document.getElementById('house-container');
-                        if (!houseContainer) {
-                            console.error("House container not found");
-                            return;
-                        }
-                        
-                        houseContainer.appendChild(obj);
-                        console.log("Object added to scene");
-                        
-                        // Add to objects array
-                        this.objects.push({
-                            type: objectType,
-                            element: obj,
-                            position: { ...position },
-                            rotation: { ...rotation },
-                            scale: objectData.defaultScale || { x: 1, y: 1, z: 1 }
-                        });
-                        
-                        // Reset indicator
-                        indicator.setAttribute('visible', false);
-                        
-                        // Hide placement controls
-                        const placementControls = document.getElementById('placement-controls');
-                        if (placementControls) placementControls.classList.remove('show');
-                        
-                        const placementGuide = document.getElementById('placement-guide');
-                        if (placementGuide) placementGuide.classList.remove('show');
-                        
-                        const gridOverlay = document.getElementById('grid-overlay');
-                        if (gridOverlay) gridOverlay.classList.remove('show');
-                        
-                        this.isPlacing = false;
-                        this.setGridVisibility(false);
-                        
-                        // Deselect item
-                        document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
-                        this.selectedItem = null;
-                        
-                        // Show notification
-                        this.showNotification(`${objectData.displayName || objectType} placed successfully!`, 'success');
-                        
-                        console.log("Object placement completed successfully");
-                    } catch (error) {
-                        console.error("Error in confirmPlacement:", error);
-                        this.showNotification("Error placing object", "error");
-                    }
-                },
-                
-                cancelPlacement() {
-                    console.log("Cancelling placement");
-                    
-                    // Hide placement indicator
-                    const indicator = document.getElementById('placement-indicator');
-                    if (indicator) indicator.setAttribute('visible', false);
-                    
-                    // Hide placement controls
-                    const placementControls = document.getElementById('placement-controls');
-                    if (placementControls) placementControls.classList.remove('show');
-                    
-                    const placementGuide = document.getElementById('placement-guide');
-                    if (placementGuide) placementGuide.classList.remove('show');
-                    
-                    const gridOverlay = document.getElementById('grid-overlay');
-                    if (gridOverlay) gridOverlay.classList.remove('show');
-                    
-                    this.isPlacing = false;
-                    this.setGridVisibility(false);
-                    
-                    // Deselect item
-                    document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
-                    this.selectedItem = null;
-                },
-                
-                rotateObject() {
-                    if (this.isPlacing) {
-                        // Rotate in 45-degree increments
-                        this.currentRotation = (this.currentRotation + 45) % 360;
-                        console.log(`Rotating object to: ${this.currentRotation} degrees`);
-                        
-                        const indicator = document.getElementById('placement-indicator');
-                        if (indicator) {
-                            indicator.setAttribute('rotation', { x: 0, y: this.currentRotation, z: 0 });
-                        }
-                    }
-                },
-                
-                snapToGrid(position) {
-                    return {
-                        x: Math.round(position.x / this.gridSize) * this.gridSize,
-                        y: this.defaultHeight, // Keep at default height
-                        z: Math.round(position.z / this.gridSize) * this.gridSize
-                    };
-                },
-                
-                selectObject(element) {
-                    if (!element) {
-                        console.warn("Tried to select null element");
-                        return;
-                    }
-                    
-                    // Deselect any previously selected object
-                    this.deselectObject();
-                    
-                    // Select the new object
-                    this.selectedElement = element;
-                    console.log("Selected object:", this.selectedElement);
-                    
-                    // Highlight the selected object
-                    this.updateSelectionBox();
-                },
-                
-                updateSelectionBox() {
-                    if (!this.selectedElement || !this.selectionBox) {
-                        if (this.selectionBox) this.selectionBox.setAttribute('visible', false);
-                        return;
-                    }
-                    
-                    // Get object properties
-                    const position = this.selectedElement.getAttribute('position');
-                    const rotation = this.selectedElement.getAttribute('rotation');
-                    const objectType = this.selectedElement.dataset.type;
-                    
-                    if (typeof MODELS === 'undefined') {
-                        console.error("MODELS not defined");
-                        return;
-                    }
-                    
-                    const objectData = MODELS[objectType];
-                    if (!objectData) {
-                        console.error(`Model type not found: ${objectType}`);
-                        return;
-                    }
-                    
-                    // Create bounding box for the selection box
-                    const boundingBox = objectData.boundingBox || { width: 1, height: 1, depth: 1 };
-                    
-                    // Update selection box
-                    this.selectionBox.setAttribute('position', position);
-                    this.selectionBox.setAttribute('rotation', rotation);
-                    
-                    // Create or update the box
-                    this.selectionBox.innerHTML = '';
-                    
-                    // Create wireframe box
-                    const box = document.createElement('a-entity');
-                    box.setAttribute('geometry', `primitive: box; width: ${boundingBox.width + 0.05}; height: ${boundingBox.height + 0.05}; depth: ${boundingBox.depth + 0.05}`);
-                    box.setAttribute('material', 'color: #5B8BFF; opacity: 0.2; wireframe: true');
-                    
-                    this.selectionBox.appendChild(box);
-                    this.selectionBox.setAttribute('visible', true);
-                },
-                
-                deselectObject() {
-                    this.selectedElement = null;
-                    if (this.selectionBox) this.selectionBox.setAttribute('visible', false);
-                    
-                    const objectMenu = document.getElementById('object-menu');
-                    if (objectMenu) objectMenu.style.display = 'none';
-                    
-                    const propertiesPanel = document.getElementById('properties-panel');
-                    if (propertiesPanel) propertiesPanel.style.display = 'none';
-                },
-                
-                showObjectMenu(event) {
-                    // Position the menu at the mouse position
-                    const menu = document.getElementById('object-menu');
-                    if (!menu) {
-                        console.error("Object menu not found");
-                        return;
-                    }
-                    
-                    menu.style.left = `${event.clientX}px`;
-                    menu.style.top = `${event.clientY}px`;
-                    menu.style.display = 'flex';
-                },
-                
-                editSelectedObject() {
-                    if (this.selectedElement) {
-                        this.showPropertiesPanel();
-                    }
-                },
-                
-                rotateSelectedObject() {
-                    if (this.selectedElement) {
-                        const currentRotation = this.selectedElement.getAttribute('rotation');
-                        const newRotation = {
-                            x: currentRotation.x,
-                            y: (currentRotation.y + 45) % 360,
-                            z: currentRotation.z
-                        };
-                        
-                        console.log(`Rotating object to: ${newRotation.y} degrees`);
-                        this.selectedElement.setAttribute('rotation', newRotation);
-                        this.updateSelectionBox();
-                    }
-                },
-                
-                duplicateSelectedObject() {
-                    if (this.selectedElement) {
-                        const objectType = this.selectedElement.dataset.type;
-                        const position = this.selectedElement.getAttribute('position');
-                        const rotation = this.selectedElement.getAttribute('rotation');
-                        const scale = this.selectedElement.getAttribute('scale');
-                        
-                        console.log(`Duplicating object of type: ${objectType}`);
-                        
-                        // Create a new object at a slightly offset position
-                        const newPosition = {
-                            x: position.x + this.gridSize,
-                            y: position.y,
-                            z: position.z + this.gridSize
-                        };
-                        
-                        const obj = document.createElement('a-entity');
-                        obj.setAttribute('class', 'interactive collidable');
-                        obj.setAttribute('data-type', objectType);
-                        obj.setAttribute('position', newPosition);
-                        obj.setAttribute('rotation', rotation);
-                        obj.setAttribute('scale', scale);
-                        
-                        // Set model
-                        if (MODELS[objectType].model) {
-                            obj.setAttribute('gltf-model', MODELS[objectType].model);
-                            obj.setAttribute('shadow', 'cast: true; receive: true');
-                        }
-                        
-                        // Add to the house container
-                        const houseContainer = document.getElementById('house-container');
-                        if (!houseContainer) {
-                            console.error("House container not found");
-                            return;
-                        }
-                        
-                        houseContainer.appendChild(obj);
-                        
-                        // Add to objects array
-                        this.objects.push({
-                            type: objectType,
-                            element: obj,
-                            position: { ...newPosition },
-                            rotation: { ...rotation },
-                            scale: { ...scale }
-                        });
-                        
-                        // Select the new object
-                        this.selectObject(obj);
-                        
-                        // Show notification
-                        this.showNotification('Object duplicated', 'success');
-                    }
-                },
-                
-                deleteSelectedObject() {
-                    if (this.selectedElement) {
-                        this.deleteObject(this.selectedElement);
-                    }
-                },
-                
-                deleteObject(element) {
-                    if (!element) {
-                        console.warn("Attempted to delete null element");
-                        return;
-                    }
-                    
-                    // Find the object in the array
-                    const index = this.objects.findIndex(obj => obj.element === element);
-                    
-                    if (index !== -1) {
-                        // Remove from the array
-                        this.objects.splice(index, 1);
-                        
-                        // Remove from the DOM
-                        if (element.parentNode) {
-                            element.parentNode.removeChild(element);
-                        }
-                        
-                        // Deselect
-                        this.deselectObject();
-                        
-                        // Show notification
-                        this.showNotification('Object deleted', 'info');
-                    }
-                },
-                
-                showPropertiesPanel() {
-                    if (!this.selectedElement) return;
-                    
-                    const panel = document.getElementById('properties-panel');
-                    const content = document.getElementById('properties-content');
-                    
-                    if (!panel || !content) return;
-                    
-                    // Clear previous content
-                    content.innerHTML = '';
-                    
-                    // Get object data
-                    const objectType = this.selectedElement.dataset.type;
-                    const objectData = MODELS[objectType];
-                    if (!objectData) return;
-                    
-                    const position = this.selectedElement.getAttribute('position');
-                    const rotation = this.selectedElement.getAttribute('rotation');
-                    const scale = this.selectedElement.getAttribute('scale');
-                    
-                    // Create the properties form
-                    const form = document.createElement('form');
-                    form.addEventListener('submit', (e) => e.preventDefault());
-                    
-                    // Basic information group
-                    const basicGroup = document.createElement('div');
-                    basicGroup.className = 'property-group';
-                    basicGroup.innerHTML = `
-                        <div class="group-title">Basic Information</div>
-                        <div class="property-row">
-                            <label>Type</label>
-                            <input type="text" value="${objectData.displayName || objectType}" readonly>
-                        </div>
-                    `;
-                    form.appendChild(basicGroup);
-                    
-                    // Position group
-                    const positionGroup = document.createElement('div');
-                    positionGroup.className = 'property-group';
-                    positionGroup.innerHTML = `
-                        <div class="group-title">Position</div>
-                        <div class="property-row">
-                            <label>X Position</label>
-                            <input type="number" id="pos-x" value="${position.x.toFixed(2)}" step="0.5">
-                        </div>
-                        <div class="property-row">
-                            <label>Z Position</label>
-                            <input type="number" id="pos-z" value="${position.z.toFixed(2)}" step="0.5">
-                        </div>
-                    `;
-                    form.appendChild(positionGroup);
-                    
-                    // Rotation group
-                    const rotationGroup = document.createElement('div');
-                    rotationGroup.className = 'property-group';
-                    rotationGroup.innerHTML = `
-                        <div class="group-title">Rotation</div>
-                        <div class="property-row">
-                            <label>Y Rotation (degrees)</label>
-                            <div class="slider-control">
-                                <div class="slider-row">
-                                    <input type="range" id="rot-y" min="0" max="359" value="${rotation.y}" step="5">
-                                    <div class="slider-value">${rotation.y}°</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    form.appendChild(rotationGroup);
-                    
-                    // Actions group
-                    const actionsGroup = document.createElement('div');
-                    actionsGroup.className = 'property-group';
-                    actionsGroup.innerHTML = `
-                        <div class="group-title">Actions</div>
-                        <div class="property-actions">
-                            <div class="property-btn btn-secondary" id="prop-duplicate">Duplicate</div>
-                            <div class="property-btn danger" id="prop-delete">Delete</div>
-                        </div>
-                    `;
-                    form.appendChild(actionsGroup);
-                    
-                    // Add the form to the content
-                    content.appendChild(form);
-                    
-                    // Add event listeners to form controls
-                    setTimeout(() => {
-                        // Position inputs
-                        const posX = document.getElementById('pos-x');
-                        if (posX) {
-                            posX.addEventListener('change', (e) => {
-                                const newPos = { ...position, x: parseFloat(e.target.value) };
-                                this.selectedElement.setAttribute('position', newPos);
-                                this.updateSelectionBox();
-                            });
-                        }
-                        
-                        const posZ = document.getElementById('pos-z');
-                        if (posZ) {
-                            posZ.addEventListener('change', (e) => {
-                                const newPos = { ...position, z: parseFloat(e.target.value) };
-                                this.selectedElement.setAttribute('position', newPos);
-                                this.updateSelectionBox();
-                            });
-                        }
-                        
-                        // Rotation slider
-                        const rotSlider = document.getElementById('rot-y');
-                        if (rotSlider) {
-                            const rotValue = rotSlider.nextElementSibling;
-                            rotSlider.addEventListener('input', (e) => {
-                                if (rotValue) rotValue.textContent = `${e.target.value}°`;
-                            });
-                            
-                            rotSlider.addEventListener('change', (e) => {
-                                const newRot = { ...rotation, y: parseInt(e.target.value) };
-                                this.selectedElement.setAttribute('rotation', newRot);
-                                this.updateSelectionBox();
-                            });
-                        }
-                        
-                        // Action buttons
-                        const duplicateBtn = document.getElementById('prop-duplicate');
-                        if (duplicateBtn) {
-                            duplicateBtn.addEventListener('click', () => this.duplicateSelectedObject());
-                        }
-                        
-                        const deleteBtn = document.getElementById('prop-delete');
-                        if (deleteBtn) {
-                            deleteBtn.addEventListener('click', () => this.deleteSelectedObject());
-                        }
-                    }, 0);
-                    
-                    // Show the panel
-                    panel.style.display = 'block';
-                },
-                
-                showNotification(message, type = 'info') {
-                    const notification = document.getElementById('notification');
-                    const text = document.getElementById('notification-text');
-                    
-                    if (!notification || !text) return;
-                    
-                    text.textContent = message;
-                    
-                    // Reset classes
-                    notification.className = 'notification';
-                    
-                    // Add type-specific class
-                    if (type) {
-                        notification.classList.add(type);
-                    }
-                    
-                    // Show notification
-                    notification.classList.add('show');
-                    
-                    // Hide after 3 seconds
-                    clearTimeout(this.notificationTimeout);
-                    this.notificationTimeout = setTimeout(() => {
-                        notification.classList.remove('show');
-                    }, 3000);
-                },
-                
-                updateUI() {
-                    // Update button states based on current mode
-                    document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('active'));
-                    const modeBtn = document.getElementById(`${this.mode}-btn`);
-                    if (modeBtn) {
-                        modeBtn.classList.add('active');
-                    }
-                },
-                
-                saveDesign() {
-                    // Simple save to localStorage for now
-                    try {
-                        const designData = {
-                            objects: this.objects.map(obj => ({
-                                type: obj.type,
-                                position: obj.element.getAttribute('position'),
-                                rotation: obj.element.getAttribute('rotation'),
-                                scale: obj.element.getAttribute('scale')
-                            }))
-                        };
-                        
-                        localStorage.setItem('easyfloor-design', JSON.stringify(designData));
-                        this.lastSaved = Date.now();
-                        this.showNotification('Design saved', 'success');
-                    } catch (e) {
-                        console.error('Error saving design:', e);
-                        this.showNotification('Error saving design', 'error');
-                    }
-                },
-                
-                loadDesign() {
-                    try {
-                        const savedData = localStorage.getItem('easyfloor-design');
-                        if (!savedData) {
-                            this.showNotification('No saved design found', 'error');
-                            return;
-                        }
-                        
-                        const designData = JSON.parse(savedData);
-                        
-                        // Clear existing objects
-                        this.objects.forEach(obj => {
-                            if (obj.element.parentNode) {
-                                obj.element.parentNode.removeChild(obj.element);
-                            }
-                        });
-                        
-                        this.objects = [];
-                        
-                        // Create new objects from saved data
-                        const houseContainer = document.getElementById('house-container');
-                        if (!houseContainer) {
-                            console.error("House container element not found");
-                            return;
-                        }
-                        
-                        designData.objects.forEach(objData => {
-                            const obj = document.createElement('a-entity');
-                            obj.setAttribute('class', 'interactive collidable');
-                            obj.setAttribute('data-type', objData.type);
-                            obj.setAttribute('position', objData.position);
-                            obj.setAttribute('rotation', objData.rotation);
-                            obj.setAttribute('scale', objData.scale);
-                            
-                            // Set model
-                            const modelData = MODELS[objData.type];
-                            if (modelData && modelData.model) {
-                                obj.setAttribute('gltf-model', modelData.model);
-                                obj.setAttribute('shadow', 'cast: true; receive: true');
-                            }
-                            
-                            houseContainer.appendChild(obj);
-                            
-                            this.objects.push({
-                                type: objData.type,
-                                element: obj,
-                                position: objData.position,
-                                rotation: objData.rotation,
-                                scale: objData.scale
-                            });
-                        });
-                        
-                        this.showNotification('Design loaded successfully', 'success');
-                    } catch (e) {
-                        console.error('Error loading design:', e);
-                        this.showNotification('Error loading design', 'error');
-                    }
-                },
-                
-                exportDesign() {
-                    try {
-                        // For now, just create a JSON export
-                        const designData = {
-                            version: '1.0',
-                            timestamp: Date.now(),
-                            objects: this.objects.map(obj => ({
-                                type: obj.type,
-                                position: obj.element.getAttribute('position'),
-                                rotation: obj.element.getAttribute('rotation'),
-                                scale: obj.element.getAttribute('scale')
-                            }))
-                        };
-                        
-                        // Create a blob and download link
-                        const blob = new Blob([JSON.stringify(designData, null, 2)], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `easyfloor-design-${new Date().toISOString().substring(0, 10)}.json`;
-                        a.click();
-                        
-                        URL.revokeObjectURL(url);
-                        
-                        this.showNotification('Design exported', 'success');
-                    } catch (e) {
-                        console.error('Error exporting design:', e);
-                        this.showNotification('Error exporting design', 'error');
-                    }
-                },
-                
-                undo() {
-                    // Not implemented in this simplified version
-                    this.showNotification('Undo not implemented in demo', 'info');
-                },
-                
-                redo() {
-                    // Not implemented in this simplified version
-                    this.showNotification('Redo not implemented in demo', 'info');
-                },
-                
-                addToUndoStack() {
-                    // Not implemented in this simplified version
-                }
-            };
+                // Apply color to object
+                obj.setAttribute('material', {
+                    color: color,
+                    emissive: '#5B8BFF',
+                    emissiveIntensity: 0.2
+                });
+            });
+        });
+        
+        // Duplicate button
+        document.getElementById('duplicate-property').addEventListener('click', () => {
+            this.duplicateSelectedObject();
+        });
+        
+        // Delete button
+        document.getElementById('delete-property').addEventListener('click', () => {
+            this.deleteSelectedObject();
+        });
+        
+        // Show panel
+        propertiesPanel.style.display = 'block';
+    },
+    
+    // Edit selected object
+    editSelectedObject: function() {
+        if (!this.selectedObject) return;
+        
+        // Show properties panel
+        this.showPropertiesPanel(this.selectedObject);
+    },
+    
+    // Rotate selected object
+    rotateSelectedObject: function() {
+        if (!this.selectedObject) return;
+        
+        // Get current rotation and add 90 degrees
+        const rotation = this.selectedObject.getAttribute('rotation');
+        rotation.y = (rotation.y + 90) % 360;
+        
+        this.selectedObject.setAttribute('rotation', rotation);
+        
+        // Update properties panel if open
+        const rotYSlider = document.getElementById('rot-y');
+        const rotYValue = document.getElementById('rot-y-value');
+        if (rotYSlider && rotYValue) {
+            rotYSlider.value = rotation.y;
+            rotYValue.textContent = `${rotation.y}°`;
+        }
+    },
+    
+    // Duplicate selected object
+    duplicateSelectedObject: function() {
+        if (!this.selectedObject) return;
+        
+        // Get object data
+        const objectType = this.selectedObject.getAttribute('data-object-type');
+        const position = this.selectedObject.getAttribute('position');
+        const rotation = this.selectedObject.getAttribute('rotation');
+        
+        // Offset position slightly
+        const newPosition = {
+            x: position.x + 1,
+            y: position.y,
+            z: position.z + 1
+        };
+        
+        // Create duplicate object
+        const newObj = this.createObject(objectType, newPosition, rotation);
+        
+        // Select the new object
+        this.selectObject(newObj);
+        
+        // Show notification
+        this.showNotification('Object duplicated', 'success');
+    },
+    
+    // Delete selected object
+    deleteSelectedObject: function() {
+        if (!this.selectedObject) return;
+        
+        // Remove object from scene
+        this.deleteObject(this.selectedObject);
+        
+        // Clear selection
+        this.selectedObject = null;
+        
+        // Hide object menu
+        document.getElementById('object-menu').style.display = 'none';
+        
+        // Hide properties panel
+        document.getElementById('properties-panel').style.display = 'none';
+    },
+    
+    // Delete object from scene
+    deleteObject: function(obj) {
+        // Remove from house container
+        obj.parentNode.removeChild(obj);
+        
+        // Show notification
+        this.showNotification('Object deleted', 'success');
+    },
+    
+    // Start moving an object
+    startMovingObject: function(obj) {
+        // Store reference to object being moved
+        this.selectedObject = obj;
+        
+        // Show placement indicator at object's position
+        const position = obj.getAttribute('position');
+        const rotation = obj.getAttribute('rotation');
+        const objectType = obj.getAttribute('data-object-type');
+        
+        // Create placement indicator
+        this.isPlacing = true;
+        this.placementValid = true;
+        this.selectedItem = objectType;
+        
+        // Create indicator with model
+        const indicator = this.placementIndicator;
+        indicator.innerHTML = '';
+        
+        // Create model entity
+        const modelEntity = document.createElement('a-entity');
+        modelEntity.setAttribute('gltf-model', MODELS[objectType].model);
+        modelEntity.setAttribute('scale', MODELS[objectType].defaultScale);
+        modelEntity.setAttribute('rotation', rotation);
+        
+        // Add semi-transparent material for placement
+        modelEntity.setAttribute('material', {
+            opacity: 0.7,
+            transparent: true,
+            color: '#88FF88'
+        });
+        
+        // Add a backup box as fallback
+        const backupBox = document.createElement('a-box');
+        backupBox.setAttribute('class', 'backup-box');
+        backupBox.setAttribute('width', MODELS[objectType].boundingBox.width);
+        backupBox.setAttribute('height', MODELS[objectType].boundingBox.height);
+        backupBox.setAttribute('depth', MODELS[objectType].boundingBox.depth);
+        backupBox.setAttribute('material', {
+            color: MODELS[objectType].materials[0] || '#FF5555',
+            opacity: 0.8,
+            wireframe: true
+        });
+        
+        indicator.appendChild(modelEntity);
+        indicator.appendChild(backupBox);
+        
+        indicator.setAttribute('visible', true);
+        indicator.setAttribute('position', position);
+        indicator.setAttribute('rotation', rotation);
+        
+        // Hide the original object
+        obj.setAttribute('visible', false);
+        
+        // Show placement guide and controls
+        this.placementGuide.classList.add('show');
+        this.placementGuide.querySelector('.text').textContent = 'Click to place object';
+        
+        this.placementControls.classList.add('show');
+        
+        // Setup confirm/cancel handlers for moving
+        const confirmBtn = document.getElementById('place-confirm');
+        const cancelBtn = document.getElementById('place-cancel');
+        
+        // Store original handlers
+        this.originalConfirmHandler = confirmBtn.onclick;
+        this.originalCancelHandler = cancelBtn.onclick;
+        
+        // Set new handlers
+        confirmBtn.onclick = () => {
+            // Apply new position and rotation to original object
+            obj.setAttribute('position', this.placementIndicator.getAttribute('position'));
+            obj.setAttribute('rotation', this.placementIndicator.getAttribute('rotation'));
+            
+            // Show the original object
+            obj.setAttribute('visible', true);
+            
+            // End placement mode
+            this.cancelPlacement();
+            
+            // Restore original handlers
+            confirmBtn.onclick = this.originalConfirmHandler;
+            cancelBtn.onclick = this.originalCancelHandler;
+            
+            // Show notification
+            this.showNotification('Object moved', 'success');
+            
+            // Clear selection
+            this.selectedObject = null;
+        };
+        
+        cancelBtn.onclick = () => {
+            // Show the original object without moving it
+            obj.setAttribute('visible', true);
+            
+            // End placement mode
+            this.cancelPlacement();
+            
+            // Restore original handlers
+            confirmBtn.onclick = this.originalConfirmHandler;
+            cancelBtn.onclick = this.originalCancelHandler;
+            
+            // Clear selection
+            this.selectedObject = null;
+        };
+    },
+    
+    // Show notification
+    showNotification: function(message, type = '') {
+        const notification = this.notification;
+        const textElement = document.getElementById('notification-text');
+        
+        // Set message and type
+        textElement.textContent = message;
+        notification.className = 'notification';
+        
+        if (type) {
+            notification.classList.add(type);
+        }
+        
+        // Show notification
+        notification.classList.add('show');
+        
+        // Hide after 3 seconds
+        clearTimeout(this.notificationTimeout);
+        this.notificationTimeout = setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    }
+};

@@ -2,11 +2,12 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>EasyFloor - Home Design Builder</title>
-    <meta name="description" content="Design your home with a Clash of Clans-style interface for easy object placement">
+    <title>Visual-House - Home Design Builder</title>
+    <meta name="description" content="Design your home in 3D with an intuitive interface for easy object placement">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
     <link rel="stylesheet" href="css/styles-fix.css">
@@ -688,7 +689,7 @@
         <div class="header">
             <div class="app-title">
                 <div class="logo"><i class="fas fa-home"></i></div>
-                <span>EasyFloor</span>
+                <span>Visual-House</span>
             </div>
             <div class="header-actions">
                 <button id="save-btn" class="btn btn-secondary header-btn">
@@ -819,9 +820,9 @@
     </div>
 
     <!-- A-Frame Scene -->
-    <a-scene embedded vr-mode-ui="enabled: false">
+    <a-scene embedded vr-mode-ui="enabled: false" renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; gammaOutput: true; sortObjects: true;">
         <!-- Assets -->
-        <a-assets>
+        <a-assets timeout="10000">
             <!-- Structure Models -->
             <a-asset-item id="blank-wall" src="assets/models/walls/blank_wall.glb"></a-asset-item>
             <a-asset-item id="wall_with_door" src="assets/models/walls/wall_with_door.glb"></a-asset-item>
@@ -877,10 +878,11 @@
             <a-entity id="grid"></a-entity>
         </a-entity>
         
-        <!-- Lighting -->
-        <a-entity light="type: ambient; color: #BBB; intensity: 0.5"></a-entity>
-        <a-entity light="type: directional; color: #FFF; intensity: 0.6; castShadow: true" position="1 1 1"></a-entity>
-        <a-entity light="type: directional; color: #FFF; intensity: 0.4" position="-1 1 -1"></a-entity>
+        <!-- Enhanced lighting for better visibility -->
+        <a-entity light="type: ambient; color: #FFF; intensity: 0.8"></a-entity>
+        <a-entity light="type: directional; color: #FFF; intensity: 1.0; castShadow: true" position="1 1 1"></a-entity>
+        <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="-1 1 -1"></a-entity>
+        <a-entity light="type: hemisphere; color: #BBB; groundColor: #444; intensity: 0.6"></a-entity>
         
         <!-- Camera Rig -->
         <a-entity id="camera-rig" position="0 15 0" rotation="-90 0 0">
@@ -898,280 +900,186 @@
         
         <!-- Container for all house elements -->
         <a-entity id="house-container"></a-entity>
+        
+        <!-- Test objects to verify rendering works -->
+        <a-box position="0 0.5 -5" color="red"></a-box>
+        <a-sphere position="2 0.5 -5" radius="0.5" color="blue"></a-sphere>
     </a-scene>
 
     <!-- JavaScript Files -->
     <script src="js/model.js"></script>
+    <script src="js/model-handler.js"></script>
     <script src="js/camera-controller.js"></script>
     <script src="js/collision-manager.js"></script>
     <script src="js/app.js"></script>     
     <script src="js/main.js"></script>
     
-    <!-- Troubleshooting script for model placement issues -->
+    <!-- Model visibility debug script - Add before closing </body> tag -->
+    <!-- Last updated: 2025-04-23 by AntonisSavva02 -->
     <script>
+        // Add visual debug indicator for model visibility
         document.addEventListener('DOMContentLoaded', function() {
-            // Wait for APP to be initialized
-            const checkAPP = setInterval(function() {
-                if (typeof APP !== 'undefined' && APP.initialized) {
-                    clearInterval(checkAPP);
-                    setupDebugHelpers();
-                }
-            }, 500);
+            console.log('Setting up model visibility debugger');
             
-            function setupDebugHelpers() {
-                console.log("Setting up model placement debug helpers...");
+            // Create debug indicator
+            const debugIndicator = document.createElement('div');
+            debugIndicator.style.position = 'fixed';
+            debugIndicator.style.bottom = '10px';
+            debugIndicator.style.left = '10px';
+            debugIndicator.style.backgroundColor = 'rgba(0,0,0,0.7)';
+            debugIndicator.style.color = 'white';
+            debugIndicator.style.padding = '10px';
+            debugIndicator.style.borderRadius = '5px';
+            debugIndicator.style.zIndex = '9999';
+            debugIndicator.style.fontSize = '12px';
+            debugIndicator.style.fontFamily = 'monospace';
+            debugIndicator.id = 'debug-indicator';
+            document.body.appendChild(debugIndicator);
+            
+            // Monitor model visibility
+            function updateDebugInfo() {
+                const models = document.querySelectorAll('[gltf-model]');
+                const backupBoxes = document.querySelectorAll('.backup-box');
+                const objectContainers = document.querySelectorAll('#house-container > .interactive');
                 
-                // Add isPlacementValid method if it doesn't exist
-                if (!APP.isPlacementValid) {
-                    console.log("Creating isPlacementValid method");
-                    APP.isPlacementValid = function(boundingBox, objectType, excludeElement) {
-                        console.log(`Checking placement validity for: ${objectType}`);
-                        
-                        // For now, make placement always valid
-                        return true;
-                    };
-                } else {
-                    // Override isPlacementValid to always return true
-                    const originalIsPlacementValid = APP.isPlacementValid;
-                    APP.isPlacementValid = function(boundingBox, objectType, excludeElement) {
-                        console.log(`Checking placement validity for: ${objectType}`);
-                        
-                        // For testing, always return true
-                        return true;
-                    };
-                }
+                let info = '<strong>Visual-House Debug</strong><br>';
+                info += `Models: ${models.length}, Backups: ${backupBoxes.length}, Objects: ${objectContainers.length}<br>`;
                 
-                // Add calculateBoundingBox method if it doesn't exist
-                if (!APP.calculateBoundingBox) {
-                    console.log("Creating calculateBoundingBox method");
-                    APP.calculateBoundingBox = function(position, rotation, size) {
-                        // Simple AABB calculation without rotation consideration
-                        const halfWidth = size.width / 2;
-                        const halfHeight = size.height / 2;
-                        const halfDepth = size.depth / 2;
-                        
-                        return {
-                            min: {
-                                x: position.x - halfWidth,
-                                y: position.y - halfHeight,
-                                z: position.z - halfDepth
-                            },
-                            max: {
-                                x: position.x + halfWidth,
-                                y: position.y + halfHeight,
-                                z: position.z + halfDepth
-                            }
-                        };
-                    };
-                }
+                // Check if test primitives are visible
+                const testBox = document.querySelector('a-box[color="red"]');
+                const testSphere = document.querySelector('a-sphere[color="blue"]');
+                info += `Test box visible: ${testBox && testBox.object3D && testBox.object3D.visible}<br>`;
+                info += `Test sphere visible: ${testSphere && testSphere.object3D && testSphere.object3D.visible}<br>`;
                 
-                // Override confirmPlacement method to simplify it
-                if (APP.confirmPlacement) {
-                    const originalConfirmPlacement = APP.confirmPlacement;
-                    APP.confirmPlacement = function() {
-                        console.log("Enhanced confirm placement called");
-                        
-                        // Force placementValid to true to bypass collision check
-                        this.placementValid = true;
-                        
-                        try {
-                            // Get the indicator and its position/rotation
-                            const indicator = document.getElementById('placement-indicator');
-                            if (!indicator) {
-                                console.error("Placement indicator not found");
-                                return;
-                            }
-                            
-                            const position = indicator.getAttribute('position');
-                            const rotation = indicator.getAttribute('rotation');
-                            
-                            // Create the actual object
-                            const objectType = this.selectedItem;
-                            
-                            if (!objectType || !MODELS || !MODELS[objectType]) {
-                                console.error(`Invalid model type: ${objectType}`);
-                                return;
-                            }
-                            
-                            const objectData = MODELS[objectType];
-                            
-                            // Create object
-                            const obj = document.createElement('a-entity');
-                            obj.setAttribute('class', 'interactive collidable');
-                            obj.setAttribute('data-type', objectType);
-                            obj.setAttribute('position', position);
-                            obj.setAttribute('rotation', rotation);
-                            obj.setAttribute('scale', objectData.defaultScale || { x: 1, y: 1, z: 1 });
-                            
-                            // Set model
-                            if (objectData.model) {
-                                obj.setAttribute('gltf-model', objectData.model);
-                                obj.setAttribute('shadow', 'cast: true; receive: true');
-                            }
-                            
-                            // Add to house container
-                            const houseContainer = document.getElementById('house-container');
-                            if (!houseContainer) {
-                                console.error("House container not found");
-                                return;
-                            }
-                            
-                            houseContainer.appendChild(obj);
-                            
-                            // Add to objects array
-                            this.objects.push({
-                                type: objectType,
-                                element: obj,
-                                position: { ...position },
-                                rotation: { ...rotation },
-                                scale: objectData.defaultScale || { x: 1, y: 1, z: 1 }
-                            });
-                            
-                            // Reset indicator
-                            indicator.setAttribute('visible', false);
-                            
-                            // Hide placement controls
-                            const placementControls = document.getElementById('placement-controls');
-                            if (placementControls) placementControls.classList.remove('show');
-                            
-                            const placementGuide = document.getElementById('placement-guide');
-                            if (placementGuide) placementGuide.classList.remove('show');
-                            
-                            const gridOverlay = document.getElementById('grid-overlay');
-                            if (gridOverlay) gridOverlay.classList.remove('show');
-                            
-                            this.isPlacing = false;
-                            this.setGridVisibility(false);
-                            
-                            // Deselect item
-                            document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
-                            this.selectedItem = null;
-                            
-                            // Show notification
-                            this.showNotification(`Object placed successfully!`, 'success');
-                            
-                            console.log("Object placement completed successfully");
-                        } catch (error) {
-                            console.error("Error in confirmPlacement:", error);
-                            this.showNotification("Error placing object", "error");
-                        }
-                    };
-                }
-                
-                // Override handleMouseUp to fix model placement
-                if (APP.handleMouseUp) {
-                    const originalHandleMouseUp = APP.handleMouseUp;
-                    APP.handleMouseUp = function(event) {
-                        console.log("Enhanced mouse up handler called");
-                        console.log("Is placing:", this.isPlacing);
-                        console.log("Target:", event.target);
-                        
-                        // Check if we're in placement mode
-                        if (this.isPlacing) {
-                            console.log("In placement mode - confirming placement");
-                            this.placementValid = true; // Force valid placement
-                            this.confirmPlacement();
-                        }
-                        
-                        this.isDragging = false;
-                    };
-                }
-                
-                // Add direct model placement testing function
-                APP.testPlaceModel = function(modelType) {
-                    console.log("Testing direct model placement for:", modelType);
-                    
-                    if (!modelType || !MODELS[modelType]) {
-                        console.error("Invalid model type specified");
-                        alert("Please specify a valid model type");
-                        return;
-                    }
-                    
-                    // Create the object at center position
-                    const obj = document.createElement('a-entity');
-                    obj.setAttribute('class', 'interactive collidable');
-                    obj.setAttribute('data-type', modelType);
-                    obj.setAttribute('position', { x: 0, y: 0, z: 0 });
-                    obj.setAttribute('rotation', { x: 0, y: 0, z: 0 });
-                    obj.setAttribute('scale', MODELS[modelType].defaultScale || { x: 1, y: 1, z: 1 });
-                    
-                    // Set model
-                    if (MODELS[modelType].model) {
-                        obj.setAttribute('gltf-model', MODELS[modelType].model);
-                        obj.setAttribute('shadow', 'cast: true; receive: true');
-                    }
-                    
-                    // Add to the house container
-                    const houseContainer = document.getElementById('house-container');
-                    if (!houseContainer) {
-                        console.error("House container not found");
-                        alert("House container not found");
-                        return;
-                    }
-                    
-                    houseContainer.appendChild(obj);
-                    
-                    // Add to objects array
-                    this.objects.push({
-                        type: modelType,
-                        element: obj,
-                        position: { x: 0, y: 0, z: 0 },
-                        rotation: { x: 0, y: 0, z: 0 },
-                        scale: MODELS[modelType].defaultScale || { x: 1, y: 1, z: 1 }
-                    });
-                    
-                    this.showNotification('Test model placed successfully!', 'success');
-                };
-                
-                // Improve mouse event debugging
-                const ground = document.getElementById('ground');
-                if (ground) {
-                    ground.addEventListener('click', function(e) {
-                        console.log("Ground clicked:", e);
-                        console.log("APP.isPlacing:", APP.isPlacing);
-                        console.log("APP.selectedItem:", APP.selectedItem);
+                // List placed objects
+                if (objectContainers.length > 0) {
+                    info += '<br><strong>Placed Objects:</strong><br>';
+                    objectContainers.forEach((obj, i) => {
+                        const type = obj.getAttribute('data-object-type');
+                        const visible = obj.object3D && obj.object3D.visible;
+                        const pos = obj.getAttribute('position');
+                        info += `${i+1}. ${type}: visible=${visible}, pos=${pos.x.toFixed(1)},${pos.y.toFixed(1)},${pos.z.toFixed(1)}<br>`;
                     });
                 }
                 
-                // Add a floating debug button
-                const debugButton = document.createElement('div');
-                debugButton.style.position = 'fixed';
-                debugButton.style.top = '120px';
-                debugButton.style.right = '20px';
-                debugButton.style.background = '#ff5722';
-                debugButton.style.color = 'white';
-                debugButton.style.padding = '10px';
-                debugButton.style.borderRadius = '5px';
-                debugButton.style.cursor = 'pointer';
-                debugButton.style.zIndex = '9999';
-                debugButton.innerHTML = 'Test Place Model';
-                
-                debugButton.onclick = function() {
-                    // Show model selection dialog
-                    const modelTypes = Object.keys(MODELS);
-                    const modelType = prompt("Enter model type to test place:\n" + modelTypes.join(', '));
-                    if (modelType && MODELS[modelType]) {
-                        APP.testPlaceModel(modelType);
-                    } else if (modelType) {
-                        alert("Invalid model type. Available types:\n" + modelTypes.join(', '));
-                    }
-                };
-                
-                document.body.appendChild(debugButton);
-                
-                console.log("Debug helpers setup complete!");
+                debugIndicator.innerHTML = info;
             }
             
-            // Enhanced model loading diagnostics
-            document.querySelectorAll('a-asset-item').forEach(item => {
-                item.addEventListener('loaded', function() {
-                    console.log(`Asset loaded: ${item.id}`);
-                });
+            // Update every 2 seconds
+            setInterval(updateDebugInfo, 2000);
+            
+            // Create test primitives to verify A-Frame is working
+            setTimeout(() => {
+                const scene = document.querySelector('a-scene');
+                if (scene) {
+                    // Create a red box
+                    const box = document.createElement('a-box');
+                    box.setAttribute('position', '0 1 -5');
+                    box.setAttribute('color', 'red');
+                    box.setAttribute('rotation', '0 45 0');
+                    scene.appendChild(box);
+                    
+                    // Create a blue sphere
+                    const sphere = document.createElement('a-sphere');
+                    sphere.setAttribute('position', '2 1 -5');
+                    sphere.setAttribute('radius', '0.5');
+                    sphere.setAttribute('color', 'blue');
+                    scene.appendChild(sphere);
+                    
+                    // Create a yellow cylinder for additional test
+                    const cylinder = document.createElement('a-cylinder');
+                    cylinder.setAttribute('position', '-2 1 -5');
+                    cylinder.setAttribute('radius', '0.5');
+                    cylinder.setAttribute('height', '1.0');
+                    cylinder.setAttribute('color', 'yellow');
+                    scene.appendChild(cylinder);
+                    
+                    console.log('Created test primitives');
+                }
+            }, 2000);
+        });
+        
+        // Fix startPlacement method to show backup shapes
+        if (typeof APP !== 'undefined' && APP.startPlacement) {
+            const originalStartPlacement = APP.startPlacement;
+            APP.startPlacement = function() {
+                // Call the original method
+                originalStartPlacement.call(this);
                 
-                item.addEventListener('error', function(e) {
-                    console.error(`Asset error for ${item.id}:`, e);
+                // Add backup box to placement indicator
+                if (this.selectedItem && MODELS[this.selectedItem] && this.placementIndicator) {
+                    const modelData = MODELS[this.selectedItem];
+                    const backupBox = document.createElement('a-box');
+                    backupBox.setAttribute('class', 'backup-box');
+                    backupBox.setAttribute('width', modelData.boundingBox.width);
+                    backupBox.setAttribute('height', modelData.boundingBox.height);
+                    backupBox.setAttribute('depth', modelData.boundingBox.depth);
+                    backupBox.setAttribute('material', {
+                        color: modelData.materials[0] || '#FF5555',
+                        opacity: 0.8,
+                        wireframe: true
+                    });
+                    this.placementIndicator.appendChild(backupBox);
+                }
+            };
+        }
+        
+        // Emergency fixes for model visibility
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Applying emergency fixes for model visibility');
+            
+            // Wait for scene to be fully loaded
+            const scene = document.querySelector('a-scene');
+            if (scene) {
+                scene.addEventListener('loaded', function() {
+                    console.log('A-Frame scene loaded, applying emergency fixes');
+                    
+                    // Force all models to be visible
+                    setInterval(function() {
+                        // Find all objects in house container
+                        const houseElements = document.querySelectorAll('#house-container > *');
+                        console.log('Found', houseElements.length, 'elements in house container');
+                        
+                        houseElements.forEach(function(element) {
+                            // Force visibility
+                            element.setAttribute('visible', true);
+                            
+                            // If material component exists, ensure it's visible
+                            if (element.getAttribute('material')) {
+                                element.setAttribute('material', 'opacity', 1);
+                                element.setAttribute('material', 'transparent', false);
+                            }
+                            
+                            // Apply THREE.js visibility directly
+                            if (element.object3D) {
+                                element.object3D.visible = true;
+                                element.object3D.traverse(function(node) {
+                                    node.visible = true;
+                                    if (node.material) {
+                                        node.material.transparent = false;
+                                        node.material.opacity = 1;
+                                        node.material.needsUpdate = true;
+                                    }
+                                });
+                            }
+                        });
+                    }, 2000); // Check every 2 seconds
                 });
-            });
+            }
+        });
+    </script>
+    
+    <!-- Main initialization script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the application when document is ready
+            if (typeof APP !== 'undefined' && APP.init) {
+                // Main app initialization
+                APP.init();
+                console.log('APP initialized');
+            } else {
+                console.error('APP object not defined or missing init method');
+            }
         });
     </script>
 </body>
