@@ -679,7 +679,6 @@
             z-index: 1000 !important;
             pointer-events: auto !important;
         }
-        
     </style>
 </head>
 
@@ -902,29 +901,278 @@
     </a-scene>
 
     <!-- JavaScript Files -->
-    <!-- Corrected script imports -->
     <script src="js/model.js"></script>
     <script src="js/camera-controller.js"></script>
     <script src="js/collision-manager.js"></script>
     <script src="js/app.js"></script>     
     <script src="js/main.js"></script>
     
+    <!-- Troubleshooting script for model placement issues -->
     <script>
-        
-        // Add these lines to fix the timestamp issue
-        if (window.console) {
-          const originalLog = console.log;
-          console.log = function(...args) {
-            // Filter out timestamp messages
-            if (args.length > 0 && 
-                typeof args[0] === 'string' && 
-                (args[0].includes('Current Date') || 
-                 args[0].includes('Current User'))) {
-              return; // Don't log these messages
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait for APP to be initialized
+            const checkAPP = setInterval(function() {
+                if (typeof APP !== 'undefined' && APP.initialized) {
+                    clearInterval(checkAPP);
+                    setupDebugHelpers();
+                }
+            }, 500);
+            
+            function setupDebugHelpers() {
+                console.log("Setting up model placement debug helpers...");
+                
+                // Add isPlacementValid method if it doesn't exist
+                if (!APP.isPlacementValid) {
+                    console.log("Creating isPlacementValid method");
+                    APP.isPlacementValid = function(boundingBox, objectType, excludeElement) {
+                        console.log(`Checking placement validity for: ${objectType}`);
+                        
+                        // For now, make placement always valid
+                        return true;
+                    };
+                } else {
+                    // Override isPlacementValid to always return true
+                    const originalIsPlacementValid = APP.isPlacementValid;
+                    APP.isPlacementValid = function(boundingBox, objectType, excludeElement) {
+                        console.log(`Checking placement validity for: ${objectType}`);
+                        
+                        // For testing, always return true
+                        return true;
+                    };
+                }
+                
+                // Add calculateBoundingBox method if it doesn't exist
+                if (!APP.calculateBoundingBox) {
+                    console.log("Creating calculateBoundingBox method");
+                    APP.calculateBoundingBox = function(position, rotation, size) {
+                        // Simple AABB calculation without rotation consideration
+                        const halfWidth = size.width / 2;
+                        const halfHeight = size.height / 2;
+                        const halfDepth = size.depth / 2;
+                        
+                        return {
+                            min: {
+                                x: position.x - halfWidth,
+                                y: position.y - halfHeight,
+                                z: position.z - halfDepth
+                            },
+                            max: {
+                                x: position.x + halfWidth,
+                                y: position.y + halfHeight,
+                                z: position.z + halfDepth
+                            }
+                        };
+                    };
+                }
+                
+                // Override confirmPlacement method to simplify it
+                if (APP.confirmPlacement) {
+                    const originalConfirmPlacement = APP.confirmPlacement;
+                    APP.confirmPlacement = function() {
+                        console.log("Enhanced confirm placement called");
+                        
+                        // Force placementValid to true to bypass collision check
+                        this.placementValid = true;
+                        
+                        try {
+                            // Get the indicator and its position/rotation
+                            const indicator = document.getElementById('placement-indicator');
+                            if (!indicator) {
+                                console.error("Placement indicator not found");
+                                return;
+                            }
+                            
+                            const position = indicator.getAttribute('position');
+                            const rotation = indicator.getAttribute('rotation');
+                            
+                            // Create the actual object
+                            const objectType = this.selectedItem;
+                            
+                            if (!objectType || !MODELS || !MODELS[objectType]) {
+                                console.error(`Invalid model type: ${objectType}`);
+                                return;
+                            }
+                            
+                            const objectData = MODELS[objectType];
+                            
+                            // Create object
+                            const obj = document.createElement('a-entity');
+                            obj.setAttribute('class', 'interactive collidable');
+                            obj.setAttribute('data-type', objectType);
+                            obj.setAttribute('position', position);
+                            obj.setAttribute('rotation', rotation);
+                            obj.setAttribute('scale', objectData.defaultScale || { x: 1, y: 1, z: 1 });
+                            
+                            // Set model
+                            if (objectData.model) {
+                                obj.setAttribute('gltf-model', objectData.model);
+                                obj.setAttribute('shadow', 'cast: true; receive: true');
+                            }
+                            
+                            // Add to house container
+                            const houseContainer = document.getElementById('house-container');
+                            if (!houseContainer) {
+                                console.error("House container not found");
+                                return;
+                            }
+                            
+                            houseContainer.appendChild(obj);
+                            
+                            // Add to objects array
+                            this.objects.push({
+                                type: objectType,
+                                element: obj,
+                                position: { ...position },
+                                rotation: { ...rotation },
+                                scale: objectData.defaultScale || { x: 1, y: 1, z: 1 }
+                            });
+                            
+                            // Reset indicator
+                            indicator.setAttribute('visible', false);
+                            
+                            // Hide placement controls
+                            const placementControls = document.getElementById('placement-controls');
+                            if (placementControls) placementControls.classList.remove('show');
+                            
+                            const placementGuide = document.getElementById('placement-guide');
+                            if (placementGuide) placementGuide.classList.remove('show');
+                            
+                            const gridOverlay = document.getElementById('grid-overlay');
+                            if (gridOverlay) gridOverlay.classList.remove('show');
+                            
+                            this.isPlacing = false;
+                            this.setGridVisibility(false);
+                            
+                            // Deselect item
+                            document.querySelectorAll('.item-card').forEach(i => i.classList.remove('active'));
+                            this.selectedItem = null;
+                            
+                            // Show notification
+                            this.showNotification(`Object placed successfully!`, 'success');
+                            
+                            console.log("Object placement completed successfully");
+                        } catch (error) {
+                            console.error("Error in confirmPlacement:", error);
+                            this.showNotification("Error placing object", "error");
+                        }
+                    };
+                }
+                
+                // Override handleMouseUp to fix model placement
+                if (APP.handleMouseUp) {
+                    const originalHandleMouseUp = APP.handleMouseUp;
+                    APP.handleMouseUp = function(event) {
+                        console.log("Enhanced mouse up handler called");
+                        console.log("Is placing:", this.isPlacing);
+                        console.log("Target:", event.target);
+                        
+                        // Check if we're in placement mode
+                        if (this.isPlacing) {
+                            console.log("In placement mode - confirming placement");
+                            this.placementValid = true; // Force valid placement
+                            this.confirmPlacement();
+                        }
+                        
+                        this.isDragging = false;
+                    };
+                }
+                
+                // Add direct model placement testing function
+                APP.testPlaceModel = function(modelType) {
+                    console.log("Testing direct model placement for:", modelType);
+                    
+                    if (!modelType || !MODELS[modelType]) {
+                        console.error("Invalid model type specified");
+                        alert("Please specify a valid model type");
+                        return;
+                    }
+                    
+                    // Create the object at center position
+                    const obj = document.createElement('a-entity');
+                    obj.setAttribute('class', 'interactive collidable');
+                    obj.setAttribute('data-type', modelType);
+                    obj.setAttribute('position', { x: 0, y: 0, z: 0 });
+                    obj.setAttribute('rotation', { x: 0, y: 0, z: 0 });
+                    obj.setAttribute('scale', MODELS[modelType].defaultScale || { x: 1, y: 1, z: 1 });
+                    
+                    // Set model
+                    if (MODELS[modelType].model) {
+                        obj.setAttribute('gltf-model', MODELS[modelType].model);
+                        obj.setAttribute('shadow', 'cast: true; receive: true');
+                    }
+                    
+                    // Add to the house container
+                    const houseContainer = document.getElementById('house-container');
+                    if (!houseContainer) {
+                        console.error("House container not found");
+                        alert("House container not found");
+                        return;
+                    }
+                    
+                    houseContainer.appendChild(obj);
+                    
+                    // Add to objects array
+                    this.objects.push({
+                        type: modelType,
+                        element: obj,
+                        position: { x: 0, y: 0, z: 0 },
+                        rotation: { x: 0, y: 0, z: 0 },
+                        scale: MODELS[modelType].defaultScale || { x: 1, y: 1, z: 1 }
+                    });
+                    
+                    this.showNotification('Test model placed successfully!', 'success');
+                };
+                
+                // Improve mouse event debugging
+                const ground = document.getElementById('ground');
+                if (ground) {
+                    ground.addEventListener('click', function(e) {
+                        console.log("Ground clicked:", e);
+                        console.log("APP.isPlacing:", APP.isPlacing);
+                        console.log("APP.selectedItem:", APP.selectedItem);
+                    });
+                }
+                
+                // Add a floating debug button
+                const debugButton = document.createElement('div');
+                debugButton.style.position = 'fixed';
+                debugButton.style.top = '120px';
+                debugButton.style.right = '20px';
+                debugButton.style.background = '#ff5722';
+                debugButton.style.color = 'white';
+                debugButton.style.padding = '10px';
+                debugButton.style.borderRadius = '5px';
+                debugButton.style.cursor = 'pointer';
+                debugButton.style.zIndex = '9999';
+                debugButton.innerHTML = 'Test Place Model';
+                
+                debugButton.onclick = function() {
+                    // Show model selection dialog
+                    const modelTypes = Object.keys(MODELS);
+                    const modelType = prompt("Enter model type to test place:\n" + modelTypes.join(', '));
+                    if (modelType && MODELS[modelType]) {
+                        APP.testPlaceModel(modelType);
+                    } else if (modelType) {
+                        alert("Invalid model type. Available types:\n" + modelTypes.join(', '));
+                    }
+                };
+                
+                document.body.appendChild(debugButton);
+                
+                console.log("Debug helpers setup complete!");
             }
-            return originalLog.apply(console, args);
-          };
-        }
-      </script>
+            
+            // Enhanced model loading diagnostics
+            document.querySelectorAll('a-asset-item').forEach(item => {
+                item.addEventListener('loaded', function() {
+                    console.log(`Asset loaded: ${item.id}`);
+                });
+                
+                item.addEventListener('error', function(e) {
+                    console.error(`Asset error for ${item.id}:`, e);
+                });
+            });
+        });
+    </script>
 </body>
 </html>
