@@ -8,6 +8,8 @@
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.135.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.135.0/examples/js/loaders/GLTFLoader.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
     <link rel="stylesheet" href="css/styles-fix.css">
@@ -824,48 +826,53 @@
         <!-- Assets -->
         <a-assets timeout="10000">
             <!-- Structure Models -->
-            <a-asset-item id="blank-wall" src="assets/models/walls/blank_wall.glb"></a-asset-item>
-            <a-asset-item id="wall_with_door" src="assets/models/walls/wall_with_door.glb"></a-asset-item>
-            <a-asset-item id="wall_with_window" src="assets/models/walls/wall_with_window.glb"></a-asset-item>
+            <a-asset-item id="blank-wall" src="assets/models/walls/blank_wall.glb" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="wall_with_door" src="assets/models/walls/wall_with_door.glb" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="wall_with_window" src="assets/models/walls/wall_with_window.glb" crossorigin="anonymous"></a-asset-item>
 
             <!--Floor Models-->
-            <a-asset-item id="concrete_floor" src="assets/models/floors/concrete_floor.gltf"></a-asset-item>
-            <a-asset-item id="wood_floor" src="assets/models/floors/wood_floor.gltf"></a-asset-item>
+            <a-asset-item id="concrete_floor" src="assets/models/floors/concrete_floor.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="wood_floor" src="assets/models/floors/wood_floor.gltf" crossorigin="anonymous"></a-asset-item>
 
             <!--Roof Models-->
-            <a-asset-item id="brick_roof" src="assets/models/roofs/brick_roof.gltf"></a-asset-item>
-            <a-asset-item id="polygonal_roof" src="assets/models/roofs/polygonal_roof.gltf"></a-asset-item>
-            <a-asset-item id="tile_roof" src="assets/models/roofs/tile_roof.gltf"></a-asset-item>
+            <a-asset-item id="brick_roof" src="assets/models/roofs/brick_roof.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="polygonal_roof" src="assets/models/roofs/polygonal_roof.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="tile_roof" src="assets/models/roofs/tile_roof.gltf" crossorigin="anonymous"></a-asset-item>
 
             <!--Bathrroom Models-->
-            <a-asset-item id="bathroom" src="assets/models/bathroom/bathroom.gltf"></a-asset-item>
-            <a-asset-item id="bathroom_1" src="assets/models/bathroom/bathroom(1).gltf"></a-asset-item>
-            <a-asset-item id="toilet" src="assets/models/bathroom/toilet.gltf"></a-asset-item>
+            <a-asset-item id="bathroom" src="assets/models/bathroom/bathroom.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="bathroom_1" src="assets/models/bathroom/bathroom(1).gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="toilet" src="assets/models/bathroom/toilet.gltf" crossorigin="anonymous"></a-asset-item>
 
             <!--Bedroom Models-->
-            <a-asset-item id="bed" src="assets/models/bedroom/bed.gltf"></a-asset-item>
+            <a-asset-item id="bed" src="assets/models/bedroom/bed.gltf" crossorigin="anonymous"></a-asset-item>
         
             <!--Accessories-->
-            <a-asset-item id="bookshelf" src="assets/models/accessories/bookshelf.gltf"></a-asset-item>
-            <a-asset-item id="house_lamp" src="assets/models/accessories/house_lamp.gltf"></a-asset-item>
-            <a-asset-item id="office_desk" src="assets/models/accessories/office_desk.gltf"></a-asset-item>
-            <a-asset-item id="tv" src="assets/models/accessories/tv.gltf"></a-asset-item>
-            <a-asset-item id="wall_shelf" src="assets/models/accessories/wall_shelf.gltf"></a-asset-item>
-            <a-asset-item id="wardrobe" src="assets/models/accessories/wardrobe.gltf"></a-asset-item>
-            <a-asset-item id="washing_machine" src="assets/models/accessories/washing_machine.gltf"></a-asset-item>
+            <a-asset-item id="bookshelf" src="assets/models/accessories/bookshelf.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="house_lamp" src="assets/models/accessories/house_lamp.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="office_desk" src="assets/models/accessories/office_desk.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="tv" src="assets/models/accessories/tv.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="wall_shelf" src="assets/models/accessories/wall_shelf.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="wardrobe" src="assets/models/accessories/wardrobe.gltf" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="washing_machine" src="assets/models/accessories/washing_machine.gltf" crossorigin="anonymous"></a-asset-item>
 
             <!--Sofa Models-->
-            <a-asset-item id="big_sofa_set_1" src="assets/models/sofa/big_sofa_set_1.glb"></a-asset-item>
-            <a-asset-item id="small_sofa_set_1" src="assets/models/sofa/small_sofa_set_1.glb"></a-asset-item>
-            <a-asset-item id="chair_sofa_set_1" src="assets/models/sofa/chair_sofa_set_1.glb"></a-asset-item>
-            <a-asset-item id="sofa_set_2" src="assets/models/sofa/sofa_set_2.glb"></a-asset-item>
-            <a-asset-item id="chair_sofa_set_2" src="assets/models/sofa/chair_sofa_set_2.glb"></a-asset-item>
+            <a-asset-item id="big_sofa_set_1" src="assets/models/sofa/big_sofa_set_1.glb" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="small_sofa_set_1" src="assets/models/sofa/small_sofa_set_1.glb" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="chair_sofa_set_1" src="assets/models/sofa/chair_sofa_set_1.glb" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="sofa_set_2" src="assets/models/sofa/sofa_set_2.glb" crossorigin="anonymous"></a-asset-item>
+            <a-asset-item id="chair_sofa_set_2" src="assets/models/sofa/chair_sofa_set_2.glb" crossorigin="anonymous"></a-asset-item>
 
             <!--Carpet Models-->
-            <a-asset-item id="sofa_set_2_carpet" src="assets/models/carpets/sofa_set_2_carpet.glb"></a-asset-item>
+            <a-asset-item id="sofa_set_2_carpet" src="assets/models/carpets/sofa_set_2_carpet.glb" crossorigin="anonymous"></a-asset-item>
 
             <!--Table Models-->
-            <a-asset-item id="sofa_set_2_table" src="assets/models/tables/sofa_set_2_table.glb"></a-asset-item>
+            <a-asset-item id="sofa_set_2_table" src="assets/models/tables/sofa_set_2_table.glb" crossorigin="anonymous"></a-asset-item>
+            
+            <!-- Default textures -->
+            <img id="wall-texture" src="assets/models/walls/textures/01_-_Plaster003_0_baseColor.jpeg" crossorigin="anonymous">
+            <img id="floor-texture" src="assets/models/floors/concrete_textures/floor_texture_baseColor.png" crossorigin="anonymous">
+            <img id="wood-texture" src="assets/models/floors/wood_textures/DefaultMaterial_baseColor.png" crossorigin="anonymous">
         </a-assets>
         
         <!-- Environment (simple outdoor scene) -->
@@ -909,14 +916,14 @@
     <!-- JavaScript Files -->
     <script src="js/texture-finder.js"></script>
     <script src="js/model.js"></script>
-    <script src="js/model-handler.js"></script>
+    <script src="js/model-helper.js"></script>
     <script src="js/camera-controller.js"></script>
     <script src="js/collision-manager.js"></script>
     <script src="js/app.js"></script>     
     <script src="js/main.js"></script>
     
     <!-- Model visibility debug script - Add before closing </body> tag -->
-    <!-- Last updated: 2025-04-23 10:22:38 by AntonisSavva02 -->
+    <!-- Last updated: 2025-04-23 14:59:13 by AntonisSavva02 -->
     <script>
         // Add visual debug indicator for model visibility
         document.addEventListener('DOMContentLoaded', function() {
@@ -940,11 +947,12 @@
             // Monitor model visibility
             function updateDebugInfo() {
                 const models = document.querySelectorAll('[gltf-model]');
+                const directModels = document.querySelectorAll('[direct-model]');
                 const backupBoxes = document.querySelectorAll('.backup-box');
                 const objectContainers = document.querySelectorAll('#house-container > .interactive');
                 
                 let info = '<strong>Visual-House Debug</strong><br>';
-                info += `Models: ${models.length}, Backups: ${backupBoxes.length}, Objects: ${objectContainers.length}<br>`;
+                info += `GLTF Models: ${models.length}, Direct-Models: ${directModels.length}, Backups: ${backupBoxes.length}, Objects: ${objectContainers.length}<br>`;
                 
                 // Check if test primitives are visible
                 const testBox = document.querySelector('a-box[color="red"]');
@@ -963,7 +971,31 @@
                     });
                 }
                 
+                // Add helper buttons
+                info += '<br><button id="reloadModelsBtn" style="background:#5B8BFF;color:white;border:none;padding:5px 10px;border-radius:4px;width:100%;margin-bottom:5px;cursor:pointer;">Reload All Models</button>';
+                info += '<button id="findTexturesBtn" style="background:#4CAF50;color:white;border:none;padding:5px 10px;border-radius:4px;width:100%;cursor:pointer;">Find Textures</button>';
+                
                 debugIndicator.innerHTML = info;
+                
+                // Add event handlers to buttons
+                const reloadBtn = document.getElementById('reloadModelsBtn');
+                const findBtn = document.getElementById('findTexturesBtn');
+                
+                if (reloadBtn) {
+                    reloadBtn.addEventListener('click', function() {
+                        if (window.reloadAllModels) {
+                            window.reloadAllModels();
+                        }
+                    });
+                }
+                
+                if (findBtn) {
+                    findBtn.addEventListener('click', function() {
+                        if (window.findTextures) {
+                            window.findTextures();
+                        }
+                    });
+                }
             }
             
             // Update every 2 seconds
@@ -995,308 +1027,37 @@
                     cylinder.setAttribute('color', 'yellow');
                     scene.appendChild(cylinder);
                     
-                    console.log('Created test primitives');
+                    // Try loading a model with direct-model component
+                    const testModel = document.createElement('a-entity');
+                    testModel.setAttribute('position', '0 0.5 -7');
+                    testModel.setAttribute('direct-model', {src: '#concrete_floor'});
+                    testModel.setAttribute('data-object-type', 'concrete-floor');
+                    scene.appendChild(testModel);
+                    
+                    console.log('Created test primitives and test model');
                 }
             }, 2000);
-        });
-        
-        // Fix startPlacement method to show backup shapes
-        if (typeof APP !== 'undefined' && APP.startPlacement) {
-            const originalStartPlacement = APP.startPlacement;
-            APP.startPlacement = function() {
-                // Call the original method
-                originalStartPlacement.call(this);
-                
-                // Add backup box to placement indicator
-                if (this.selectedItem && MODELS[this.selectedItem] && this.placementIndicator) {
-                    const modelData = MODELS[this.selectedItem];
-                    const backupBox = document.createElement('a-box');
-                    backupBox.setAttribute('class', 'backup-box');
-                    backupBox.setAttribute('width', modelData.boundingBox.width);
-                    backupBox.setAttribute('height', modelData.boundingBox.height);
-                    backupBox.setAttribute('depth', modelData.boundingBox.depth);
-                    backupBox.setAttribute('material', {
-                        color: modelData.materials[0] || '#FF5555',
-                        opacity: 0.8,
-                        wireframe: true
-                    });
-                    this.placementIndicator.appendChild(backupBox);
-                }
-            };
-        }
-        
-        // Emergency fixes for model visibility
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Applying emergency fixes for model visibility');
             
-            // Wait for scene to be fully loaded
-            const scene = document.querySelector('a-scene');
-            if (scene) {
-                scene.addEventListener('loaded', function() {
-                    console.log('A-Frame scene loaded, applying emergency fixes');
-                    
-                    // Force all models to be visible
-                    setInterval(function() {
-                        // Find all objects in house container
-                        const houseElements = document.querySelectorAll('#house-container > *');
-                        console.log('Found', houseElements.length, 'elements in house container');
-                        
-                        houseElements.forEach(function(element) {
-                            // Force visibility
-                            element.setAttribute('visible', true);
-                            
-                            // If material component exists, ensure it's visible
-                            if (element.getAttribute('material')) {
-                                element.setAttribute('material', 'opacity', 1);
-                                element.setAttribute('material', 'transparent', false);
-                            }
-                            
-                            // Apply THREE.js visibility directly
-                            if (element.object3D) {
-                                element.object3D.visible = true;
-                                element.object3D.traverse(function(node) {
-                                    node.visible = true;
-                                    if (node.material) {
-                                        node.material.transparent = false;
-                                        node.material.opacity = 1;
-                                        node.material.needsUpdate = true;
-                                    }
-                                });
-                            }
-                        });
-                    }, 2000); // Check every 2 seconds
-                });
-            }
-        });
-    </script>
-    
-    <!-- Texture finder script - helps locate textures in the repository -->
-    <!-- Last updated: 2025-04-23 10:22:38 by AntonisSavva02 -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Create a texture finder button
-            const textureFinderBtn = document.createElement('button');
-            textureFinderBtn.innerText = 'Find Textures';
-            textureFinderBtn.style.position = 'fixed';
-            textureFinderBtn.style.bottom = '190px';
-            textureFinderBtn.style.left = '10px';
-            textureFinderBtn.style.padding = '8px 12px';
-            textureFinderBtn.style.backgroundColor = '#19EFAA';
-            textureFinderBtn.style.color = '#2C384A';
-            textureFinderBtn.style.border = 'none';
-            textureFinderBtn.style.borderRadius = '5px';
-            textureFinderBtn.style.cursor = 'pointer';
-            textureFinderBtn.style.zIndex = '9999';
-            
-            // Function to check if an image exists
-            function checkImageExists(url, callback) {
-                const img = new Image();
-                img.onload = function() { callback(true); };
-                img.onerror = function() { callback(false); };
-                img.src = url;
-            }
-            
-            // Texture finder function
-            function findTexturesInRepository() {
-                // Common texture paths to try
-                const basePaths = [
-                    "assets/models/walls/textures/",
-                    "assets/models/floors/textures/",
-                    "assets/models/roofs/textures/",
-                    "assets/models/bathroom/textures/",
-                    "assets/models/bedroom/textures/",
-                    "assets/models/sofa/textures/",
-                    "assets/models/tables/textures/",
-                    "assets/models/carpets/textures/",
-                    "assets/textures/"
-                ];
-                
-                // Common texture filenames
-                const textureNames = [
-                    "texture", "diffuse", "color", "albedo", "material",
-                    "wall", "floor", "wood", "brick", "concrete", "plaster",
-                    "tile", "carpet", "fabric", "leather", "default"
-                ];
-                
-                // Extensions to try
-                const extensions = [".jpg", ".png", ".jpeg", ".webp"];
-                
-                // Create results container
-                const resultsDiv = document.createElement('div');
-                resultsDiv.style.position = 'fixed';
-                resultsDiv.style.top = '80px';
-                resultsDiv.style.right = '16px';
-                resultsDiv.style.width = '300px';
-                resultsDiv.style.maxHeight = '400px';
-                resultsDiv.style.overflowY = 'auto';
-                resultsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-                resultsDiv.style.color = 'white';
-                resultsDiv.style.padding = '16px';
-                resultsDiv.style.borderRadius = '8px';
-                resultsDiv.style.zIndex = '9999';
-                resultsDiv.style.fontFamily = 'monospace';
-                resultsDiv.style.fontSize = '12px';
-                resultsDiv.innerHTML = '<h3 style="margin-top:0">Texture Search Results</h3><p>Searching for texture files...</p>';
-                document.body.appendChild(resultsDiv);
-                
-                // Counter for found textures
-                let foundTextures = 0;
-                let checkedPaths = 0;
-                const totalPaths = basePaths.length * textureNames.length * extensions.length;
-                
-                // Update progress function
-                function updateProgress() {
-                    const percentComplete = Math.floor((checkedPaths / totalPaths) * 100);
-                    resultsDiv.innerHTML = `
-                        <h3 style="margin-top:0">Texture Search Results</h3>
-                        <p>Checking texture paths: ${percentComplete}% complete</p>
-                        <p>Found textures: ${foundTextures}</p>
-                        <div id="found-textures-list"></div>
-                    `;
+            // Initialize model-helper componentsd
+            setTimeout(() => {
+                if (window.ModelHelper && typeof ModelHelper.init === 'function') {
+                    ModelHelper.init();
+                    console.log('ModelHelper initialized from debug script');
+                } else {
+                    console.warn('ModelHelper not available yet');
                 }
                 
-                // Initial progress update
-                updateProgress();
-                
-                // Start checking paths
-                basePaths.forEach(basePath => {
-                    textureNames.forEach(textureName => {
-                        extensions.forEach(extension => {
-                            const fullPath = basePath + textureName + extension;
-                            
-                            checkImageExists(fullPath, function(exists) {
-                                checkedPaths++;
-                                
-                                if (exists) {
-                                    foundTextures++;
-                                    console.log(`%c✓ Texture found: ${fullPath}`, 'color: green; font-weight: bold');
-                                    
-                                    // Add to the results list
-                                    const foundList = document.getElementById('found-textures-list');
-                                    if (foundList) {
-                                        const textureItem = document.createElement('div');
-                                        textureItem.style.marginBottom = '8px';
-                                        textureItem.innerHTML = `
-                                            <div style="color:#19EFAA">✓ ${fullPath}</div>
-                                            <img src="${fullPath}" style="max-width:100%; max-height:60px; margin-top:4px; border:1px solid #555">
-                                        `;
-                                        foundList.appendChild(textureItem);
-                                    }
-                                }
-                                
-                                // Update progress
-                                updateProgress();
-                                
-                                // If we're done, show a close button
-                                if (checkedPaths === totalPaths) {
-                                    const closeButton = document.createElement('button');
-                                    closeButton.innerText = 'Close';
-                                    closeButton.style.backgroundColor = '#FF7367';
-                                    closeButton.style.color = 'white';
-                                    closeButton.style.border = 'none';
-                                    closeButton.style.borderRadius = '4px';
-                                    closeButton.style.padding = '6px 12px';
-                                    closeButton.style.marginTop = '16px';
-                                    closeButton.style.cursor = 'pointer';
-                                    
-                                    closeButton.addEventListener('click', function() {
-                                        document.body.removeChild(resultsDiv);
-                                    });
-                                    
-                                    resultsDiv.appendChild(closeButton);
-                                    
-                                    // Final result message
-                                    if (foundTextures === 0) {
-                                        resultsDiv.innerHTML += `
-                                            <p style="color:#FF7367">No textures found in standard locations.</p>
-                                            <p>Please check that your texture files exist and are correctly named.</p>
-                                        `;
-                                    } else {
-                                        resultsDiv.innerHTML += `
-                                            <p style="color:#19EFAA">Found ${foundTextures} textures that can be used.</p>
-                                        `;
-                                    }
-                                }
-                            });
-                        });
-                    });
-                });
-            }
-            
-            // Add click handler for texture finder button
-            textureFinderBtn.addEventListener('click', findTexturesInRepository);
-            document.body.appendChild(textureFinderBtn);
-            
-            // Create a texture reload button
-            const textureReloadBtn = document.createElement('button');
-            textureReloadBtn.innerText = 'Reload Textures';
-            textureReloadBtn.style.position = 'fixed';
-            textureReloadBtn.style.bottom = '230px';
-            textureReloadBtn.style.left = '10px';
-            textureReloadBtn.style.padding = '8px 12px';
-            textureReloadBtn.style.backgroundColor = '#5B8BFF';
-            textureReloadBtn.style.color = 'white';
-            textureReloadBtn.style.border = 'none';
-            textureReloadBtn.style.borderRadius = '5px';
-            textureReloadBtn.style.cursor = 'pointer';
-            textureReloadBtn.style.zIndex = '9999';
-            
-            textureReloadBtn.addEventListener('click', function() {
-                // Find all objects in house container
-                const houseElements = document.querySelectorAll('[gltf-model]');
-                console.log('Forcing texture reload on', houseElements.length, 'objects');
-                
-                houseElements.forEach(function(element) {
-                    // Get object type
-                    const objectType = element.getAttribute('data-object-type');
-                    if (!objectType) return;
-                    
-                    // Create a fresh model-handler component
-                    const oldHandler = element.getAttribute('model-handler');
-                    if (oldHandler) {
-                        element.removeAttribute('model-handler');
-                        
-                        // Reapply with new values
-                        setTimeout(() => {
-                            element.setAttribute('model-handler', {
-                                modelSrc: element.getAttribute('gltf-model'),
-                                defaultColor: MODELS[objectType]?.materials[0] || '#FF5555',
-                                modelName: objectType,
-                                category: MODELS[objectType]?.category || ''
-                            });
-                        }, 100);
+                // Convert any existing gltf-model elements to direct-model
+                const gltfModels = document.querySelectorAll('[gltf-model]');
+                gltfModels.forEach(model => {
+                    const src = model.getAttribute('gltf-model');
+                    if (src) {
+                        console.log(`Converting ${src} to direct-model`);
+                        model.removeAttribute('gltf-model');
+                        model.setAttribute('direct-model', {src: src});
                     }
                 });
-                
-                // Show success message
-                const notification = document.getElementById('notification');
-                const textElement = document.getElementById('notification-text');
-                if (notification && textElement) {
-                    textElement.textContent = 'Reloading textures on all objects';
-                    notification.className = 'notification success';
-                    notification.classList.add('show');
-                    
-                    setTimeout(() => {
-                        notification.classList.remove('show');
-                    }, 3000);
-                }
-            });
-            
-            document.body.appendChild(textureReloadBtn);
-        });
-    </script>
-    
-    <!-- Main initialization script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize the application when document is ready
-            if (typeof APP !== 'undefined' && APP.init) {
-                // Main app initialization
-                APP.init();
-                console.log('APP initialized');
-            } else {
-                console.error('APP object not defined or missing init method');
-            }
+            }, 1000);
         });
     </script>
 </body>
